@@ -1,0 +1,105 @@
+html, body {
+	color: #636b6f;
+	font-family: 'Nunito', sans-serif;
+	font-weight: 100;
+	height: 100%;
+	width: 100%;
+	overflow: hidden;
+	margin: 0;
+	overscroll-behavior: none;
+	padding: 0 !important;
+}
+
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+::-webkit-scrollbar-corner {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: rgba(141,141,141,.6);
+	border-radius: 7px;
+}
+::-webkit-scrollbar-track {
+	background: rgba(42,42,42,.6);
+	border-radius: 7px;
+}
+
+sf-m[name="dropdown"] {
+	::-webkit-scrollbar-thumb {
+		background: rgba(42,42,42,.6);
+		border-radius: 7px;
+	}
+	::-webkit-scrollbar-track {
+		background: rgba(141,141,141,.6);
+		border-radius: 7px;
+	}
+}
+
+.disable-effect{
+	*{
+		// filter: inherit !important;
+		box-shadow: unset !important;
+	}
+}
+
+a{
+	color: inherit;
+	text-decoration: none;
+}
+
+sf-m{
+	display: block;
+}
+
+sf-page-view{
+	display: block;
+	visibility: hidden;
+	position: absolute;
+	top: 0;
+	overflow: hidden;
+	width: 100%;
+	height: 100%;
+
+	&.page-current{
+		visibility: visible;
+		position: relative;
+
+		&.anim-pending .page-current{
+			visibility: hidden;
+		}
+	}
+}
+
+.disable-anim{
+	transition-delay: 0s;
+	transition-duration: 0s;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.anim-parent{
+	.anim-element{
+		visibility: visible;
+		backface-visibility: hidden;
+		transform-style: preserve-3d;
+		transform: translate3d(0, 0, 0);
+
+		sf-page-view{
+			visibility: visible;
+		}
+	}
+}
+
+vw-modal sf-page-view{
+	overflow: visible;
+}
+
+img{
+	opacity: 1;
+	transition: opacity 0.3s ease-in;
+}
+img.loading{
+	opacity: 0;
+}

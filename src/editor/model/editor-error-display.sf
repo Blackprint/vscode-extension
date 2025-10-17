@@ -1,0 +1,68 @@
+## html
+<sf-m name="editor-error-display" style="display: {{ errorLog.length === 0 ? 'none' : '' }}">
+    <div class="close" @click="close">x</div>
+    <div class="content">
+        <div class="title">Open VSCode devtools to see the stacktrace</div>
+        <div class="log">{{ errorLog }}</div>
+    </div>
+</sf-m>
+
+## scss-global
+sf-m[name="editor-error-display"] {
+    background: #180000bf;
+    padding: 15px 20px;
+    border: 2px solid #bd5c5247;
+    color: white;
+    box-shadow: 0 0 8px #ff4c4c63;
+    position: fixed;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    min-width: 40vw;
+    min-height: 30vh;
+    border-radius: 30px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    .close {
+        position: absolute;
+        z-index: 10;
+        right: 15px;
+        top: 8px;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    .content {
+        top: 20px;
+        font-size: 14px;
+        position: absolute;
+        width: 94%;
+        .log {
+            white-space: pre-wrap;
+        }
+        .title {
+            text-align: center;
+            width: 97%;
+            padding-bottom: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            border-bottom: 1px solid #a1a1a17a;
+            margin-bottom: 10px;
+        }
+    }
+}
+
+## js-global
+window.ErrorDisplay = sf.model('editor-error-display', (My) => {
+	My.errorLog = '';
+
+    My.close = function(){
+        My.errorLog = '';
+    }
+
+    My.addError = function(msg) {
+        My.errorLog += msg + "\n\n";
+    }
+});

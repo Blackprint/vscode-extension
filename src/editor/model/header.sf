@@ -1,0 +1,26 @@
+## html
+<sf-m name="header" class="header">
+	<div class="header-zoom">
+		<div style="display: {{ info.scale === 100 ? 'none' : 'block' }}">
+			<i class="fas fa-search"></i> {{ info.scale | 0 }}%
+		</div>
+	</div>
+</sf-m>
+
+## scss-global
+body > .header {
+	.header-zoom{
+		position: absolute;
+		right: 10px;
+		color: white;
+		opacity: 0.8;
+		top: 10px;
+		font-size: 22px;
+	}
+}
+
+## js-global
+// https://www.npmjs.com/package/scarletsframe#initializedefine-model
+var EditorHeader = sf.model('header', function(My, include){
+	My.info = {scale:100};
+});

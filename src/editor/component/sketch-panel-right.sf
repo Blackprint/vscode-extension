@@ -1,0 +1,188 @@
+## html
+<sketch-panel-right class="panel {{ opened ? 'opened' : ''}} {{ ifaceSelected == null ? 'hide' : '' }}">
+	<div class="content">
+		<div class="panel-title">Properties</div>
+		<div class="bpsprf-default">
+			<div class="field">
+				<span class="name">Title:</span> <span> {{ data.title }}</span>
+			</div>
+			<div class="field">
+				<span class="name" title="Registered node path">Namespace:</span> <span style="font-size:12px"> {{ data.namespace }}</span>
+			</div>
+			<div class="field">
+				<span class="name" title="Add an ID so you can easily reference to this node from scripts">Node ID:</span>
+				<input sf-bind="data.id" placeholder="...">
+			</div>
+			<div class="field">
+				<span class="name">Comment:</span>
+				<textarea sf-bind="data.comment" placeholder="Add node comment here..."></textarea>
+			</div>
+		</div>
+		<div class="bpsprf-iface">
+			<sf-slot for="ifaceField"></sf-slot>
+		</div>
+	</div>
+	<div class="opener" @click="opened ? closePanel(event) : openPanel()">
+		<i class="fas fa-chevron-{{ opened ? 'right' : 'left' }}"></i>
+	</div>
+</sketch-panel-right>
+
+## scss-global
+body sketch-page > .panels sketch-panel-right {
+	backdrop-filter: blur(8px); // Long CSS rule = more priority
+}
+
+sketch-page > .panels.has-minimap sketch-panel-right {
+	height: calc(100% - 200px);
+	overflow: auto;
+}
+
+sketch-page > .panels sketch-panel-right {
+	position: absolute;
+	// visibility: hidden;
+	bottom: 0;
+	right: 0;
+	width: 240px;
+	border: 1px solid #202020;
+    height: 100%;
+	transform: translate(230px, 0);
+	transition: 0.3s ease-out transform;
+	display: flex;
+	// position: relative;
+	background: #00000085;
+	align-items: center;
+	.content {
+		visibility: hidden;
+		word-break: break-word;
+		width: 100%;
+		top: 0;
+		position: absolute;
+		padding: 6px 0;
+		color: #ffffff8a;
+
+		.panel-title{
+			color: white;
+			font-size: 18px;
+			font-weight: bold;
+			text-align: center;
+		}
+	}
+	.opener{
+		cursor: pointer;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		padding: 10px 10px 10px 0;
+		position: absolute;
+		left: -10px;
+		i {
+			color: #ffffff70;
+			position: absolute;
+			left: 10px;
+			font-size: 12px;
+			display: block;
+		}
+	}
+	&.hide{
+		display: none;
+	}
+	&.opened {
+		transform: translate(0px, 0);
+		.content {
+			visibility: visible;
+		}
+	}
+}
+.anim-element sketch-page > .panels sketch-panel-right.opened .content {
+	visibility: hidden;
+}
+
+// bpsprf = Blackprint Sketch Panel Right Field
+.bpsprf-default, .bpsprf-iface {
+	// border-bottom: 1px dashed #ffffff2e;
+
+	.field {
+		border-top: 1px dashed #ffffff2e;
+		margin-top: 4px;
+		padding-top: 2px;
+		padding-left: 5px;
+	}
+	.field > .name {
+		color: white;
+	}
+	input, textarea {
+		background: rgba(0, 0, 0, 0.63);
+		color: white;
+		border: none;
+		outline: none;
+		padding: 4px;
+		width: calc(100% - 12px);
+		border-radius: 10px;
+	}
+}
+
+## js-global
+sf.component('sketch-panel-right', {template: #this.path}, function(My){
+	My.opened = true;
+	My.ifaceSelected = null;
+	My.ifaceField = null;
+
+	My.data = {title:'', namespace:'',
+		id:'',
+		v2m$id(val){
+			My.ifaceSelected.node.instance.changeNodeId(My.ifaceSelected, val);
+		},
+		comment:'',
+		v2m$comment(val){
+			My.ifaceSelected.comment = val;
+			My.ifaceSelected.node.instance.emit('_editor.node.comment', { iface: My.ifaceSelected });
+		},
+	};
+
+	My.init = function(){
+		let sketchPage = My.$el.parent('sketch-page')[0].model;
+		sketchPage.panels.right = My;
+	}
+
+	function removeBlur(){
+		My.$el.css('backdrop-filter', 'none');
+		setTimeout(()=> My.$el.css('backdrop-filter', ''), 300);
+	}
+
+	My.hide = function(){
+		My.ifaceSelected = null;
+	}
+
+	let _firstTimeOpen = true;
+	My.selectNode = function(iface){
+		My.ifaceSelected = iface;
+		My.data.title = iface.title;
+		My.data.namespace = iface.namespace;
+		My.data.id = iface.id || '';
+		My.data.comment = iface.comment || '';
+
+		if(iface._bpeditorpanel == null){
+			// Blackprint Panel Component
+			let bppc = 'bppc-' + iface.namespace.toLowerCase().split('/').join('-');
+			let bppcList = Blackprint.space.component(bppc);
+			
+			if(bppcList.new != null){
+				let element = bppcList.new.stem(iface);
+				iface._bpeditorpanel = element;
+			}
+		}
+
+		My.ifaceField = iface._bpeditorpanel || null;
+	}
+
+	My.openPanel = function(){
+		if(!My.opened) removeBlur();
+		My.opened = true;
+	}
+
+	My.closePanel = function(ev){
+		removeBlur();
+		ev.stopPropagation();
+		My.opened = false;
+	}
+});

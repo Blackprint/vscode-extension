@@ -1,0 +1,100 @@
+## html
+<project-navigation-bar>
+	<div class="container" @pointerleave="unhoverNav">
+		<span @click="clickNav" @pointerover="hoverNav">{{ instanceName }}</span>
+		<span @click="clickNav" @pointerover="hoverNav" sf-each="x in groupNames"> <i class="fas fa-angle-double-right"></i> {{ x }}</span>
+		<span @click="clickNav" @pointerover="hoverNav" class="function-name {{ !functionName && 'hide' }}"> <i class="fas fa-angle-double-right"></i> {{ functionName }}</span>
+	</div>
+</project-navigation-bar>
+
+## scss-global
+project-navigation-bar {
+	position: absolute;
+	justify-self: anchor-center;
+
+	.container{
+		background: #00000075;
+		border-radius: 15%;
+		box-shadow: 0 0 5px 2px #000000;
+		padding: 8px 10px 5px 10px;
+		margin-top: -5px;
+		color: grey;
+		max-width: 40vw;
+		span{
+			cursor: pointer;
+			&:hover{
+				color: #fff298;
+    			text-shadow: 0 0 #f7ff76;
+			}
+		}
+		span:last-child {
+			color: white;
+			cursor: default;
+    		text-shadow: unset;
+			pointer-events: all;
+
+			i { color: grey; }
+		}
+		.hide{
+			display: none;
+		}
+	}
+}
+
+sketch-page {
+	&.left-menu-hide {
+		project-navigation-bar{
+			margin-left: 0;
+		}
+	}
+}
+
+## js-global
+sf.component('project-navigation-bar', My => {
+	My.instanceName = '';
+	My.functionName = '';
+	My.groupNames = [];
+
+	My.mainInstance = null;
+
+	My.init = function(){
+		// As we're a child component and we want to access parent data
+		// We need to wait until parent component has been initialized after this component
+		$.afterRepaint().then(() => {
+			let sketch = $('sf-space[blackprint] > sf-m[name="container"]', My.$el[0].closest('sketch-page'))[0].model.$space.sketch;
+			let mainInstance = My.mainInstance = sketch.rootInstance ?? sketch;
+			mainInstance.tabInfo ??= {};
+
+			My.instanceName = "Root Instance";
+
+			let funcMain = sketch.parentInterface;
+			if(funcMain != null) My.functionName = funcMain.title.split('/').join(' / ');
+
+			if(My.functionName === '') My.$el('.function-name').remove();
+		});
+	}
+
+	My.hoverNav = function(ev){
+		let target = ev.target;
+		if(target.nextElementSibling == null) ToolTip.set("You currently on this page");
+		else if(target.previousElementSibling == null) ToolTip.set("Navigate to root page");
+		else ToolTip.set("Navigate to this page");
+	}
+
+	My.clickNav = function(ev){
+		let target = ev.target;
+		if(target.nextElementSibling == null) return;
+		if(target.previousElementSibling == null){
+			let path = My.mainInstance.page.space.closest('vw-page > sf-page-view').routePath;
+			views.goto(path);
+			My.mainInstance.tabInfo.currentRoute = path;
+			return;
+		}
+
+		SmallNotif.add("Failed to navigating to this page", "red");
+	}
+
+	My.unhoverNav = function(){
+		ToolTip.set();
+	}
+});

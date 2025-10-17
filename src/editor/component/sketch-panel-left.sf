@@ -1,0 +1,958 @@
+## html
+<sketch-panel-left class="panel {{ opened ? 'opened' : ''}}" @contextmenu="event.preventDefault()">
+	<div class="content">
+		<div class="preview" style="height: {{ scaledPreviewHeight }}px">
+			<div class="zoom" style="transform: scale({{ previewScale }})">
+				<sf-slot for="preview"></sf-slot>
+			</div>
+		</div>
+
+		<div class="variable-list">
+			<div class="title" @click="collapseSubPanel(this, true)"><i class="fa fa-chevron-down collapse-btn"></i> Variables</div>
+
+			<div class="tree-view-scroll">
+				<div class="tree-view tree-fullview tree-item has-child collapsed">
+					<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> Environment ({{ _envVar.length }})</div>
+					<div class="button" @click="Modal.goto('/environment-variables')"><i class="fa fa-plus-square" title="Create new environment variable"></i></div>
+
+					<div class="tree-view tree-group" tree-section="environmentVar" @pointerdown="checkDragNode">
+						<div class="tree-item" sf-each="val in _envVar" tree-item-key="{{ val.key }}">
+							<div class="title"><i class="fa tree-icon"></i> {{ val.key }}</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="tree-view tree-fullview tree-item has-child collapsed">
+					<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> Public ({{ variableCount }})</div>
+					<div class="button" @click="createVariable(event, Blackprint.VarScope.Public)"><i class="fa fa-plus-square" title="Create new public/global variable"></i></div>
+
+					<!-- /src/component/tree-list.sf -->
+					<div class="tree-view tree-group" tree-section="variables" @pointerdown="checkDragNode">
+						<div class="tree-item collapsed" tree-item-key="{{ key }}" sf-each="key, val in variables" style="display: {{ val.hidden ? 'none' : '' }}">
+							<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> {{ key }}</div>
+
+							{{@if val.constructor === Object:
+								return new $TreeList({ parentKey: '', key, val, onToggle(){ recalculateMenu() } });
+							}}
+						</div>
+					</div>
+				</div>
+
+				<div class="tree-view tree-fullview tree-item has-child" style="display: {{ isFunctionSketch ? '' : 'none' }}">
+					<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> Function </div>
+
+					<div class="tree-view tree-group">
+						<div class="tree-view tree-item has-child collapsed">
+							<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> Input ({{ funcInput.length }}) </div>
+
+							<div class="tree-view tree-group" tree-section="functionInputs" @pointerdown="checkDragNode">
+								<div class="tree-item collapsed" tree-item-key="{{ val.name }}" sf-each="val in funcInput">
+									<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> {{ val.name }}</div>
+								</div>
+							</div>
+						</div>
+						<div class="tree-view tree-item has-child collapsed">
+							<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> Output ({{ funcOutput.length }}) </div>
+
+							<div class="tree-view tree-group" tree-section="functionOutputs" @pointerdown="checkDragNode">
+								<div class="tree-item collapsed" tree-item-key="{{ val.name }}" sf-each="val in funcOutput">
+									<div class="title"><i class="fa tree-icon"></i> {{ val.name }}</div>
+								</div>
+							</div>
+						</div>
+						<div class="tree-view tree-item has-child collapsed">
+							<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> Shared ({{ functionSharedVariableLength }}) </div>
+							<div class="button" @click="createVariable(event, Blackprint.VarScope.Shared)" title="Create new shared function variable"><i class="fa fa-plus-square"></i></div>
+
+							<div class="tree-view tree-group" tree-section="sharedVariables" @pointerdown="checkDragNode">
+								<div class="tree-item collapsed" tree-item-key="{{ key }}" sf-each="key, val in funcSharedVariable" style="display: {{ val.hidden ? 'none' : '' }}">
+									<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> {{ key }}</div>
+
+									{{@if val.constructor === Object:
+										return new $TreeList({
+											parentKey: '',
+											key,
+											val,
+											onToggle(){ recalculateMenu() }
+										});
+									}}
+								</div>
+							</div>
+						</div>
+						<div class="tree-view tree-item has-child collapsed">
+							<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> Private ({{ functionVariableLength }}) </div>
+							<div class="button" @click="createVariable(event, Blackprint.VarScope.Private)" title="Create new private function variable"><i class="fa fa-plus-square"></i></div>
+
+							<div class="tree-view tree-group" tree-section="privateVars" @pointerdown="checkDragNode">
+								<div class="tree-item collapsed" tree-item-key="{{ key }}" sf-each="key, val in funcVariable" style="display: {{ val.hidden ? 'none' : '' }}">
+									<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> {{ key }}</div>
+
+									{{@if val.constructor === Object:
+										return new $TreeList({
+											parentKey: '',
+											key,
+											val,
+											onToggle(){ recalculateMenu() }
+										});
+									}}
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="function-list collapsed">
+			<div class="title" @click="collapseSubPanel(this, true)"><i class="fa fa-chevron-right collapse-btn"></i> Functions ({{ functionCount }})</div>
+			<div class="button" @click="createFunction" title="Create new empty function node"><i class="fa fa-plus-square"></i></div>
+
+			<!-- /src/component/tree-list.sf -->
+			<div class="tree-view tree-view-scroll" tree-section="functions" @pointerdown="checkDragNode">
+				<div class="tree-item collapsed" tree-item-key="{{ key }}" sf-each="key, val in functions"
+					style="display: {{ val.hidden ? 'none' : '' }}">
+					<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> {{ key }}</div>
+
+					{{@if val.constructor === Object:
+						return new $TreeList({
+							parentKey: '', key, val, onToggle(){ recalculateMenu() }
+						});
+					}}
+				</div>
+			</div>
+		</div>
+		<div class="event-list collapsed">
+			<div class="title" @click="collapseSubPanel(this, true)"><i class="fa fa-chevron-right collapse-btn"></i> Events ({{ events.totalEvent }})</div>
+			<div class="button" @click="createEvent" title="Create new empty event node"><i class="fa fa-plus-square"></i></div>
+
+			<!-- /src/component/tree-list.sf -->
+			<div class="tree-view tree-view-scroll" tree-section="events" @pointerdown="checkDragNode">
+				<div class="tree-item collapsed" tree-item-key="{{ key }}" sf-each="key, val in events.treeList"
+					style="display: {{ val.hidden ? 'none' : '' }}">
+					<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> {{ key }}</div>
+
+					{{@if val.constructor === Object:
+						return new $TreeList({ parentKey: '', key, val, onToggle(){ recalculateMenu() } });
+					}}
+				</div>
+			</div>
+		</div>
+		<div class="group-list">
+			<div class="title" @click="collapseSubPanel(this, true)"><i class="fa fa-chevron-down collapse-btn"></i> Groups ({{ groupList.length }})</div>
+
+			<!-- This list doesn't have namespace, so we don't use TreeList component here -->
+			<div class="tree-view tree-view-scroll" tree-section="groups" @pointerleave="groupListLeave()" @pointerdown="checkDragNode">
+				<div class="tree-item" sf-each="val in groupList">
+					<div class="title {{ val.active && 'active' }}" @click="groupListSelect(val)" @pointerover="groupListHover(val)"><i class="fa tree-icon"></i> {{ val.title }}</div>
+				</div>
+			</div>
+		</div>
+		<div class="node-list">
+			<div class="title" @click="collapseSubPanel(this, true)"><i class="fa fa-chevron-down collapse-btn"></i> Nodes ({{ nodeCount }})</div>
+			<div class="button" @click="createCustomNode" title="Create new node by using code editor "><i class="fa fa-plus-square"></i></div>
+
+			<!-- /src/component/tree-list.sf -->
+			<div class="tree-view tree-view-scroll" tree-section="nodes" @pointerdown="checkDragNode" @pointerover="nodeListHover" @pointerleave="nodeListLeave">
+				<div class="tree-item collapsed" sf-each="key, val in nodes"
+					style="display: {{ val.hidden ? 'none' : '' }}">
+					<div class="title" @click="collapseTree(this)"><i class="fa tree-icon"></i> {{ key }}</div>
+
+					{{@if val.constructor === Object:
+						return new $TreeList({ parentKey: '', key, val, onToggle(){ recalculateMenu() } });
+					}}
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="opener" @click="opened ? closePanel(event) : openPanel()">
+		<i class="fas fa-chevron-{{ opened ? 'left' : 'right' }}"></i>
+	</div>
+</sketch-panel-left>
+
+## scss-global
+body sketch-page > .panels sketch-panel-left {
+	backdrop-filter: blur(1px); // Long CSS rule = more priority
+}
+
+sketch-page > .panels sketch-panel-left {
+	position: absolute;
+	display: flex;
+	left: 0;
+	width: 200px;
+	height: 100%;
+	transform: translate(-190px, 0);
+	transition: 0.3s ease-out transform;
+	// position: relative;
+	background: #00000085;
+	align-items: center;
+	.content {
+		align-self: baseline;
+		visibility: hidden;
+		display: flex;
+		height: calc(100vh - 51px);
+		flex-direction: column;
+		flex-wrap: nowrap;
+		.preview{
+			// border-bottom: 1px dashed white;
+			max-width: 200px;
+			max-height: 200px;
+			// overflow: hidden;
+			.zoom{
+	    		transform-origin: left top;
+			}
+		}
+	}
+	.variable-list, .function-list, .event-list, .group-list, .node-list {
+		flex: 1;
+		color: #cbcbcb;
+		position: relative;
+		width: 190px;
+		border-top: 1px solid #787878a3;
+		padding: 5px 5px;
+		min-height: 22px;
+		height: fit-content;
+		// border-bottom: 1px dashed white;
+		.title, .button{
+			display: inline-block;
+			cursor: pointer;
+			white-space: nowrap;
+		}
+		& > .title {
+			color: #e7e7e7;
+    		font-weight: bold;
+		}
+		.collapse-btn {
+			font-size: 14px;
+			padding: 2px;
+			width: 12px;
+		}
+		.button{
+			margin-right: 10px;
+			float: right;
+		}
+		.tree-view{
+			position: relative;
+			max-height: calc(100% - 22px);
+			max-width: 185px;
+			overflow: auto;
+			font-size: 14px;
+			&.collapsed > .tree-group {
+				display: none;
+			}
+		}
+		.tree-fullview{
+			max-height: unset;
+		}
+		&.collapsed {
+			flex: 0;
+			.tree-view {
+				display: none;
+			}
+		}
+	}
+	.tree-view-scroll{
+		overflow: hidden auto;
+		height: calc(100% - 22px); // reduce by '.title' element size
+		position: relative;
+	}
+	.variable-list {
+		border-top: none;
+	}
+	.group-list{
+		.tree-view{
+			margin-top: 3px;
+		}
+		.tree-item {
+			height: 20px;
+			overflow: hidden;
+			.title{
+				overflow: hidden;
+				max-width: 100%;
+				text-overflow: ellipsis;
+			}
+			.title.active {
+				color: yellow;
+			}
+		}
+	}
+	.opener{
+		cursor: pointer;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		padding: 10px 0 10px 10px;
+		position: absolute;
+		right: -10px;
+		i {
+			color: #ffffff70;
+			position: absolute;
+			right: 10px;
+			font-size: 12px;
+			display: block;
+		}
+	}
+	&.opened {
+		transform: translate(0px, 0);
+		.content {
+			visibility: visible;
+		}
+	}
+}
+.anim-element sketch-page > .panels sketch-panel-left.opened .content {
+	visibility: hidden;
+}
+
+## js-global
+sf.component('sketch-panel-left', {template: #this.path}, function(My){
+	let sketch = My.sketch = window.CurrentSketch;
+
+	My.opened = true;
+	My.preview = null;
+	My.previewWidth = 200;
+	My.previewScale = 1;
+	My.scaledPreviewHeight = 1;
+
+	let funcNodeInstance = sketch.parentInterface?.node.bpFunction;
+	if(funcNodeInstance != null)
+		My.variables = funcNodeInstance.rootInstance.variables;
+	else My.variables = sketch.variables;
+
+	My.functions = sketch.functions;
+	My.events = sketch.events || ({totalEvent: 0, treeList: {}});
+	My.nodes = Blackprint.nodes;
+
+	My.isFunctionSketch = sketch.parentInterface != null;
+	My.funcInput = sketch.parentInterface?.input._portList ?? [];
+	My.funcOutput = sketch.parentInterface?.output._portList ?? [];
+	My.funcSharedVariable = funcNodeInstance?.variables ?? {}; // shared function variables
+	My.funcVariable = sketch.variables ?? {}; // private function variables
+
+	My._envVar = Blackprint.Environment._list;
+	My.functionSharedVariableLength = 0;
+	My.functionVariableLength = 0;
+	My.variableCount = 0;
+	My.functionCount = 0;
+	My.eventCount = 0;
+	My.nodeCount = 0;
+	My.groupList = [];
+
+	function deepCount(obj, isNodes){
+		let len = 0;
+		if(obj.hidden) return len;
+
+		for(let key in obj){
+			let temp = obj[key];
+			if(temp == null) continue;
+
+			if(isNodes){
+				if(temp instanceof Function)
+					len++;
+				else len += deepCount(temp, isNodes);
+			}
+			else {
+				if(temp.constructor !== Object)
+					len++;
+				else len += deepCount(temp, isNodes);
+			}
+		}
+
+		reSort(obj);
+		return len;
+	}
+
+	function reSort(obj){
+		if(obj._list) obj._list.sort(Intl.Collator().compare);
+		obj.refresh?.();
+	}
+
+	let waitReSortGroups, waitReSortGroups_Rec;
+	function reSortGroups(){
+		clearTimeout(waitReSortGroups);
+		clearTimeout(waitReSortGroups_Rec);
+		waitReSortGroups = setTimeout(()=>{
+			let comparer = Intl.Collator().compare;
+			My.groupList.sort((A, B) => comparer(A.title, B.title));
+			My.groupList.refresh();
+		}, 1000);
+
+		waitReSortGroups_Rec = setTimeout(()=>{
+			My.recalculateMenu();
+		}, 50);
+	}
+
+	let pendingRefreshModule;
+	My.refreshNodesCounter = () => {
+		clearTimeout(pendingRefreshModule);
+
+		pendingRefreshModule = setTimeout(async () => {
+			await My.recalculateMenu();
+			My.nodeCount = deepCount(Blackprint.availableNode, true);
+		}, 250);
+	}
+	let pendingRefreshVars;
+	My.refreshVarsCounter = () => {
+		clearTimeout(pendingRefreshVars);
+
+		pendingRefreshVars = setTimeout(() => {
+			My.variableCount = deepCount(My.variables);
+			My.functionCount = deepCount(My.functions);
+			My.eventCount = deepCount(My.events);
+
+			if(My.isFunctionSketch){
+				My.functionSharedVariableLength = deepCount(My.funcSharedVariable);
+				My.functionVariableLength = deepCount(My.funcVariable);
+			}
+		}, 250);
+	}
+
+	My.groupListElObserver ??= new IntersectionObserver((entries, observer)=> {
+		entries.forEach((entry) => {
+			let model = entry.target.model;
+			let list = My.groupList;
+			for (let i=0; i < list.length; i++) {
+				let temp = list[i];
+				if(temp.iface === model){
+					temp.active = entry.intersectionRatio !== 0;
+					break
+				}
+			}
+		});
+	}, {
+		root: null,
+		rootMargin: "0px",
+		threshold: [0, 0.05, 1],
+	});
+
+	My._onNodeCreated = ({ iface }) => {
+		if(iface.node.instance !== sketch) return;
+		if(iface.namespace === 'Decoration/Group/Default' && My.groupList.findIndex(v=> v.iface === iface) === -1) {
+			let obj = { iface, title: iface.data?.title, active: false };
+			My.groupList.push(obj);
+			sf.watch(iface.data, 'title', ()=> {
+				obj.title = iface.data.title;
+				reSortGroups();
+			});
+
+			reSortGroups();
+			$.afterRepaint().then(() => {
+				setTimeout(() => {
+					if(iface.$el == null) return;
+					My.groupListElObserver.observe(iface.$el.eq(0).children('.node')[0]);
+				}, 100);
+			});
+		}
+	};
+
+	My._onNodeDeleted = ({ iface }) => {
+		let i = My.groupList.findIndex(v=> v.iface === iface);
+		if(i !== -1) My.groupList.splice(i, 1);
+	};
+
+	My.init = function(){
+		let sketchPage = My.$el.parent('sketch-page')[0].model;
+		sketchPage.panels.left = My;
+		My.recalculateMenu();
+		My.refreshNodesCounter();
+
+		let clearTooltip = ()=> ToolTip.set();
+
+		My.$el('.variable-list > .title').on('pointerleave', clearTooltip).on('pointerover', ()=> {
+			ToolTip.set("Can be used for storing output port's value or\naccess stored data into an input port");
+		});
+
+		My.$el('.function-list > .title').on('pointerleave', clearTooltip).on('pointerover', ()=> {
+			ToolTip.set("Can be used for creating custom function node or\ngrouping many nodes as a single node");
+		});
+
+		My.$el('.event-list > .title').on('pointerleave', clearTooltip).on('pointerover', ()=> {
+			ToolTip.set("Can be used as event emitter that can be accessed\ninside any function or root instance");
+		});
+
+		My.$el('.group-list > .title').on('pointerleave', clearTooltip).on('pointerover', ()=> {
+			ToolTip.set("Region markers that can be used to grouping nodes in this page\nIt's recommended to use numbered title\n\nYou can create a region marker by hold\nleft click + move + right click");
+		});
+
+		My.$el('.node-list > .title').on('pointerleave', clearTooltip).on('pointerover', ()=> {
+			ToolTip.set("Nodes that registered to Blackprint\nYou can create your own node or import it from external sources");
+		});
+
+		sketch.on('node.created', data => My._onNodeCreated(data));
+		sketch.on('node.deleted', data => My._onNodeDeleted(data));
+
+		if(My.isFunctionSketch)
+			funcNodeInstance.rootInstance.on('variable.new variable.deleted', ev => My.refreshVarsCounter(ev));
+
+		Blackprint.on('module.added', ev => My.refreshNodesCounter(ev)); // ToDo: use dot to separate event scope
+		Blackprint.on('module.delete', ev => My.refreshNodesCounter(ev));
+		Blackprint.on('module.update', ev => My.refreshNodesCounter(ev));
+		Blackprint.on('bp_editorNodeAvailability', ev => My.refreshNodesCounter(ev));
+		$(My.refreshNodesCounter); // Run when all script/page is loaded
+		$(My.refreshVarsCounter); // Run when all script/page is loaded
+
+		sketch.on('json.imported', ev => My.refreshVarsCounter(ev));
+		sketch.on('variable.new variable.deleted function.new function.deleted', ev => My.refreshVarsCounter(ev));
+
+		let ifaceList = sketch.ifaceList;
+		for (let i=0; i < ifaceList.length; i++) {
+			let iface = ifaceList[i];
+			if(iface.namespace === 'Decoration/Group/Default') My._onNodeCreated({ iface });
+		}
+	}
+
+	let recheckPreviewSize;
+	My.setPreview = function(el){
+		if(el == null || My.preview !== el){
+			recheckPreviewSize?.disconnect();
+			recheckPreviewSize = null;
+		}
+
+		My.preview = el;
+		My.previewScale = 1;
+		My.scaledPreviewHeight = 1;
+
+		if(recheckPreviewSize != null || el == null)
+			return;
+
+		let checkTime = 0;
+		let checker = async function(){
+			await $.afterRepaint();
+
+			let width = el.clientWidth;
+			let height = el.clientHeight;
+			let scale = My.previewWidth / width;
+
+			checkTime = Math.round(Date.now() / 100);
+
+			My.previewScale = scale;
+			My.scaledPreviewHeight = height * scale;
+		}
+
+		recheckPreviewSize = new ResizeObserver(function(items){
+			if(checkTime === Math.round(Date.now() / 100)) return;
+			setTimeout(checker, 200);
+		});
+		recheckPreviewSize.observe(el);
+
+		setTimeout(checker, 100);
+	}
+
+	function removeBlur(){
+		My.$el.css('backdrop-filter', 'none');
+		setTimeout(()=> My.$el.css('backdrop-filter', ''), 300);
+	}
+
+	My.openPanel = function(){
+		removeBlur();
+		My.$el.parent('sketch-page').removeClass('left-menu-hide');
+		My.opened = true;
+		sketch.recalculatePosition();
+	}
+
+	My.closePanel = function(ev){
+		removeBlur();
+		ev.stopPropagation();
+		My.$el.parent('sketch-page').addClass('left-menu-hide');
+		My.opened = false;
+		sketch.recalculatePosition();
+	}
+
+	My.collapseTree = function(el){
+		el = el.nextElementSibling;
+		if(el == null) return;
+
+		let hidden;
+		let parent = $(el.parentNode);
+
+		if(parent.hasClass('tree-view') || parent.hasClass('tree-no-model'))
+			hidden = !parent.hasClass('collapsed');
+		else hidden = el.model.hidden = !el.model.hidden;
+
+		if(hidden)
+			parent.addClass("collapsed");
+		else {
+			if(el.model != null) reSort(el.parentNode.model);
+			parent.removeClass("collapsed");
+		}
+
+		My.recalculateMenu();
+	}
+
+	My.collapseSubPanel = (el, isMain) => {
+		let temp = $(el);
+		let parent = temp.parent();
+		parent.toggleClass("collapsed");
+
+		if(!isMain) return;
+		My.recalculateMenu();
+
+		let collapseBtn = temp.find('.collapse-btn').removeClass('fa-chevron-down').removeClass('fa-chevron-right');
+
+		if(parent.hasClass('collapsed'))
+			collapseBtn.addClass('fa-chevron-right');
+		else collapseBtn.addClass('fa-chevron-down');
+	}
+
+	My.recalculateMenu = async function(){
+		let variableMenu = My.$el('.variable-list');
+		let functionMenu = My.$el('.function-list');
+		let eventMenu = My.$el('.event-list');
+		let groupMenu = My.$el('.group-list');
+		let nodeMenu = My.$el('.node-list');
+
+		if(variableMenu[0] == null) return;
+		let $menus = [variableMenu, functionMenu, eventMenu, groupMenu, nodeMenu];
+		let menuLength = $menus.length;
+
+		let menuContainer = variableMenu.parent();
+		let maxContainerHeight = menuContainer[0].offsetHeight;
+		let maxMenuHeight = Math.round(maxContainerHeight / menuLength);
+
+		// Save current scroll position for each menu
+		let scrolls = $menus.map(v => v.find('.tree-view-scroll')[0].scrollTop);
+
+		// Maximize all menu size
+		$menus.forEach(v => v.css('max-height', ``).css('flex', `unset`).css('min-height', `unset`));
+		await $.afterRepaint();
+
+		$menus.forEach(v => {
+			let height = v[0].offsetHeight;
+			if(height < maxMenuHeight*2) v.css('max-height', `${height}px`);
+			v.css('min-height', ``).css('flex', ``);
+		});
+
+		// Restore scroll position for each menu after size reset
+		$menus.forEach((v, i) => v.find('.tree-view-scroll')[0].scrollTop = scrolls[i]);
+	}
+
+	My.nodeListLeave = ev => {
+		if(ev.pressure === 0) ToolTip.set();
+	};
+	My.nodeListHover = ev => {
+		if(ev.pressure !== 0) return; // Run on hover only, and no button click
+
+		if(!ev.target.classList.contains('title'))
+			return ToolTip.set(false);
+
+		let itemEl = $(ev.target.parentNode);
+		if(itemEl.hasClass('has-child'))
+			return ToolTip.set(false);
+
+		let key = itemEl.attr('tree-item-key');
+		let parentKey = itemEl[0].parentNode.model.parentKey;
+
+		let keys = parentKey.split('/');
+		keys.push(key);
+
+		let docs = Blackprint._utils.getDeepProperty(Blackprint._docs, keys);
+		if(docs == null)
+			return ToolTip.set(false);
+
+		ToolTip.set(docs.description, ev, 'basic');
+	};
+
+	My.checkDragNode = ev => {
+		let focus = ev.target;
+		if(focus.nextElementSibling != null) return;
+
+		focus = $(focus);
+
+		let section = focus.parent('.tree-view').attr('tree-section');
+		let itemEl = focus[0].parentNode;
+		let key = itemEl.getAttribute('tree-item-key');
+		if(key == null && section !== 'groups') return;
+
+		let parent = focus.parent(".tree-item.has-child > tree-list, .tree-view > .tree-item")[0];
+		if(parent == null) return;
+
+		if(ev.button === 2){
+			$(window).once('contextmenu', ev2 => {
+				if(ev.target !== ev2.target) return;
+				ev2.preventDefault();
+
+				let model = itemEl.model;
+				if(section === 'nodes') return; // Do nothing for now
+				if(model == null) return;
+
+				let menu = [{
+					title: "Rename",
+					async callback(){
+						async function dialog(title, placeholder, oldVal){
+							let val = await Swal.fire({
+								title, inputPlaceholder: placeholder, inputValue: oldVal, input: "text",
+							});
+
+							return val.value;
+						}
+
+						if(section === 'environmentVar'){
+							let val = await dialog("Rename Environment Variable:", "MyApp_Custom_Variable", model.key);
+							if(!val) return;
+
+							let modalObj = sf.model('environment-variables');
+							modalObj.renameEnv(model, {value: val});
+							modalObj.saveToLocalStorage();
+						}
+						else if(section === 'variables'){
+							let val = await dialog("Rename Variable Namespace:", "MyApp/Custom/Variable", model.id);
+							if(!val) return;
+
+							sketch.renameVariable(model.id, val, Blackprint.VarScope.Public);
+						}
+						else if(section === 'sharedVariables'){
+							let val = await dialog("Rename Shared Variable Name:", "MyApp_Custom_Variable", model.id);
+							if(!val) return;
+
+							let instance = funcNodeInstance;
+							instance.renameVariable(model.id, val, Blackprint.VarScope.Shared);
+						}
+						else if(section === 'privateVars'){
+							let val = await dialog("Rename Private Variable Name:", "MyApp_Custom_Variable", model.id);
+							if(!val) return;
+
+							let instance = funcNodeInstance;
+							instance.renameVariable(model.id, val, Blackprint.VarScope.Private);
+						}
+						else if(section === 'functions'){
+							let val = await dialog("Rename Function Namespace:", "MyApp/Custom/Function", model.id);
+							if(!val) return;
+
+							sketch.renameFunction(model.id, val);
+						}
+						else if(section === 'functionInputs'){
+							let val = await dialog("Rename Input Port Name:", "MyInputPortName", model.name);
+							if(!val) return;
+
+							sketch.parentInterface.renamePort('input', model.name, val);
+						}
+						else if(section === 'functionOutputs'){
+							let val = await dialog("Rename Output Port Name:", "MyOutputPortName", model.name);
+							if(!val) return;
+
+							sketch.parentInterface.renamePort('output', model.name, val);
+						}
+						else if(section === 'events'){
+							let val = await dialog("Rename Event Name:", "MyApp/Event/Name", model.namespace);
+							if(!val) return;
+
+							sketch.events.renameEvent(model.namespace, val);
+						}
+						else if(section === 'groups'){
+							let val = await dialog("Rename Group Name:", "No title", model.iface.data.title);
+							if(!val) return;
+
+							model.iface.data.title = val;
+						}
+					}
+				}, {
+					title: "Delete",
+					description: "Hold shift for instant delete",
+					async callback(){
+						if(!DropDown.lastClickEvent.shiftKey){
+							let result = await Swal.fire({
+								title: 'Are you sure want to delete this?',
+								showCancelButton: true,
+								confirmButtonText: 'Yes',
+							});
+							if(!result.isConfirmed) return;
+						}
+
+						if(section === 'environmentVar') Blackprint.Environment.delete(model.key);
+						else if(section === 'variables') sketch.deleteVariable(model.id, Blackprint.VarScope.Public);
+						else if(section === 'sharedVariables')
+							funcNodeInstance.deleteVariable(model.id, Blackprint.VarScope.Shared);
+						else if(section === 'privateVars')
+							funcNodeInstance.deleteVariable(model.id, Blackprint.VarScope.Private);
+						else if(section === 'functions') sketch.deleteFunction(model.id);
+						else if(section === 'functionInputs') funcNodeInstance.deletePort('input', model.name);
+						else if(section === 'functionOutputs') funcNodeInstance.deletePort('output', model.name);
+						else if(section === 'events') sketch.events.deleteEvent(model.namespace);
+						else if(section === 'groups') sketch.deleteNode(model.iface);
+					}
+				}];
+
+				DropDown.show(menu, ev);
+			});
+			return;
+		}
+
+		if(section === 'groups') return;
+
+		let endEvent = 'pointerup';
+		if(ev.pointerType === 'touch')
+			endEvent = 'touchend';
+
+		ToolTip.set("Create node");
+		$(sf.Window).once(endEvent, evUp => {
+			ToolTip.set();
+
+			let targetEl = evUp.target;
+			if(endEvent === 'touchend'){
+				let { clientX, clientY } = evUp.changedTouches[0];
+				evUp.clientX = clientX;
+				evUp.clientY = clientY;
+				targetEl = document.elementFromPoint(clientX, clientY);
+			}
+
+			if(targetEl.closest('sketch-page') == null) return;
+			if(targetEl.closest('sf-m.cables') != null){
+				let parentKey = parent.model.parentKey;
+				let namespace = !!parentKey ? (parentKey + '/' + key) : key;
+
+				$.afterRepaint().then(function(){
+					let offset = targetEl.getBoundingClientRect();
+					let container = sketch.scope('container');
+					let posX = (evUp.clientX - offset.x) / container.scale;
+					let posY = (evUp.clientY - offset.y) / container.scale;
+					let nodeOptions = { x: posX, y: posY };
+
+					if(section === 'nodes'){
+						sketch.createNode(namespace, nodeOptions);
+					}
+					else if(section === 'functions'){
+						itemEl.model.createNode(sketch, nodeOptions);
+					}
+					else if(section === 'variables' || section === 'sharedVariables' || section === 'privateVars'){
+						let scope;
+						if(section === 'variables') scope = 0;
+						else if(section === 'sharedVariables') scope = 2;
+						else if(section === 'privateVars') scope = 1;
+
+						nodeOptions.data = { name: namespace, scope };
+						DropDown.show([{
+							title: "Get " + namespace, callback(){
+								sketch.createNode('BP/Var/Get', nodeOptions);
+							}
+						}, {
+							title: "Set " + namespace, callback(){
+								sketch.createNode('BP/Var/Set', nodeOptions);
+							}
+						}], {x: evUp.clientX, y: evUp.clientY, event: evUp});
+					}
+					else if(section === 'environmentVar'){
+						nodeOptions.data = { name: key };
+						DropDown.show([{
+							title: "Get " + key, callback(){
+								sketch.createNode('BP/Env/Get', nodeOptions);
+							}
+						}, {
+							title: "Set " + key, callback(){
+								sketch.createNode('BP/Env/Set', nodeOptions);
+							}
+						}], {x: evUp.clientX, y: evUp.clientY, event: evUp});
+					}
+					else if(section === 'functionInputs'){
+						nodeOptions.data = { name: key };
+						sketch.createNode('BP/FnVar/Input', nodeOptions);
+					}
+					else if(section === 'functionOutputs'){1
+						nodeOptions.data = {};
+						sketch.createNode('BP/Fn/Output', nodeOptions);
+					}
+					else if(section === 'events'){
+						nodeOptions.data = { namespace: namespace };
+						DropDown.show([{
+							title: "Listen " + key, callback(){
+								sketch.createNode('BP/Event/Listen', nodeOptions);
+							}
+						}, {
+							title: "Emit " + key, callback(){
+								sketch.createNode('BP/Event/Emit', nodeOptions);
+							}
+						}], {x: evUp.clientX, y: evUp.clientY, event: evUp});
+					}
+					else console.error("Unhandled side panel section:", section);
+				});
+			};
+		});
+	}
+
+	My.createVariable = async (ev, scope) => {
+		let val = await Swal.fire({
+			title: "Variable Name:",
+			inputPlaceholder: scope === Blackprint.VarScope.Public
+				? "MyApp/Custom/Variable" : "MyApp_Custom_Variable",
+			input: "text",
+		});
+
+		val = val.value;
+		if(!val) return;
+
+		let funcInstance = sketch.parentInterface?.node.bpFunction;
+		let rootInstance = funcInstance?.rootInstance ?? sketch;
+
+		if(scope === Blackprint.VarScope.Public)
+			return rootInstance.createVariable(val);
+		else if(scope === Blackprint.VarScope.Shared || scope === Blackprint.VarScope.Private)
+			return funcInstance.createVariable(val, { scope });
+		else throw new Error("Unhandled scope: " + scope);
+
+		My.recalculateMenu();
+	}
+
+	My.createFunction = async ev => {
+		let val = await Swal.fire({
+			title: "Function Name:",
+			inputPlaceholder: "MyApp/Custom/Function",
+			input: "text",
+		});
+
+		val = val.value;
+		if(!val) return;
+
+		let rootInstance = sketch.parentInterface?.node.bpFunction.rootInstance ?? sketch;
+		rootInstance.createFunction(val, {description: "No description"});
+
+		My.recalculateMenu();
+	}
+
+	My.createEvent = async ev => {
+		let val = await Swal.fire({
+			title: "Event Namespace:",
+			inputPlaceholder: "MyApp/Custom/Event",
+			input: "text",
+		});
+
+		val = val.value;
+		if(!val) return;
+
+		let rootInstance = sketch.parentInterface?.node.bpFunction.rootInstance ?? sketch;
+		rootInstance.events.createEvent(val);
+
+		My.recalculateMenu();
+	}
+
+	My.createCustomNode = ev => {
+		Modal.goto('/custom-node-editor');
+	}
+
+	My.groupListLeave = () => {
+		ToolTip.set();
+		My.groupList.forEach(v=> v.iface.$el.children('.node').removeClass('highlighted'));
+	}
+	My.groupListHover = ({ iface }) => {
+		My.groupListLeave();
+		ToolTip.set({
+			title: iface.data.title,
+			desc: iface.data.textContent,
+			comment: iface.comment,
+		}, null, 'general');
+
+		iface.$el.children('.node').addClass('highlighted');
+	}
+	My.groupListSelect = item => {
+		let container = sketch.scope('container');
+		let { x, y } = item.iface;
+
+		x -= 40;
+		y -= 40;
+
+		if(x < 0) x = 0;
+		if(y < 0) y = 0;
+
+		x = container.scale * x;
+		y = container.scale * y;
+
+		container.moveContainer({x: -x, y: -y});
+		item.iface.swapZIndex(); // Simulate click to the group node
+	}
+});

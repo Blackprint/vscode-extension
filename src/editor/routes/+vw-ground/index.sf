@@ -1,0 +1,56 @@
+## html
+<!-- Filling the default page if haven't being routed -->
+<sf-m name="welcome-text" class="welcome-text">
+	<h1>Welcome to Blackprint Editor in Visual Studio Code!</h1>
+	<div class="description">It seems there are an error that cause you to see this message instead of the editor.</div>
+</sf-m>
+
+## scss-global
+.welcome-text{
+	color: white;
+	text-align: center;
+	padding: 0 20px;
+
+	> .description{
+		white-space: pre-line;
+	}
+
+	> .content{
+		max-width: 750px;
+		width: 90vw;
+		display: inline-flex;
+
+		.item{
+			padding: 10px;
+			width: 200px;
+			margin: 10px 14px;
+			cursor: pointer;
+			border-radius: 10px;
+			box-shadow: 0px 0px 3px white;
+			border: 1px solid #c5c5c5;
+			background: #0000008a;
+		}
+
+		.hello-message{
+			margin-top: 20px;
+			padding: 15px;
+			background: rgba(255, 255, 255, 0.1);
+			border-radius: 8px;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			color: #4CAF50;
+			font-weight: bold;
+			text-align: center;
+			min-height: 20px;
+		}
+	}
+}
+
+## js-global
+sf.model('welcome-text', function(My){
+	My.init = function(){
+		if(SketchList.length === 0)
+			window.CurrentSketch = SketchList[0] = new Blackprint.Sketch();
+
+		vscode.postMessage({ type: 'loadSketch' });
+	}
+});

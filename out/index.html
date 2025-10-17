@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+    <title>Blackprint Viewer</title>
+
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src
+            https://fonts.googleapis.com
+            https://fonts.gstatic.com
+            https://*.vscode-resource.vscode-cdn.net
+            vscode-file://vscode-app/
+            /*blackprintCspWhitelist*/
+            'unsafe-inline' 'unsafe-eval' blob: data:;
+    ">
+
+	<script src="(out-folder)/assets/scarletsframe.modern.js"></script>
+	<script type="text/javascript">
+		window.$ = sf.$;
+        window.isNode = false;
+        window.vscodeOutPath = "(out-folder)";
+        window.vscode = acquireVsCodeApi();
+        window.blackprintModules = /*blackprintModules*/1;
+        window.blackprintSkeletons = /*blackprintSkeletons*/1;
+
+        console._log = console.log;
+        console.log = function(...args){
+            console._log(...args);
+
+            for (let i=args.length-1; i >= 0; i--) {
+                let prev = args[i-1];
+                let current = args[i];
+                if(!prev || !prev.includes || !current || !current.includes) continue;
+
+                // Remove style on console log if exist
+                if(prev.includes('%c') && current.includes(':')) {
+                    prev = args[i-1] = prev.split('%c').join('');
+                    args.splice(i, 1);
+                }
+            }
+
+            let message = args.join(' ');
+            vscode.postMessage({ type: 'editorConsoleLog', data: { message } });
+        }
+
+        // 1 = Will not replace model/component value (only replace function)
+        // 2 = Replace all
+        if(sf.hotReload !== void 0) sf.hotReload(1);
+    </script>
+
+	<script src="(out-folder)/assets/sweetalert2.min.js"></script>
+
+	<script src="(out-folder)/assets/SFDatabase.min.js"></script>
+	<script src="(out-folder)/assets/lodash.min.js"></script>
+	<script src="(out-folder)/assets/eventpine.js"></script>
+	<script src="(out-folder)/assets/timeplate.min.js"></script>
+	<script src="(out-folder)/assets/engine.min.js"></script>
+	<script src="(out-folder)/assets/blackprint.min.js"></script>
+	<script src="(out-folder)/assets/blackprint.sf.js"></script>
+	<script src="(out-folder)/assets/skeleton.min.js"></script>
+	<script src="(out-folder)/assets/remote-control.min.js"></script>
+	<script src="(out-folder)/assets/remote-control.sf.js"></script>
+	<script src="(out-folder)/assets/code-generation.min.js"></script>
+    <link href="(out-folder)/assets/blackprint.sf.css" rel="stylesheet">
+    <link href="(out-folder)/assets/remote-control.sf.css" rel="stylesheet">
+    <link href="(out-folder)/assets/sweetalert2.min.css" rel="stylesheet">
+    <link href="(out-folder)/assets/custom.sf.css?1760588283025" rel="stylesheet">
+    <link href="(out-folder)/assets/mycss.min.css?1760588283005" rel="stylesheet">
+
+    <link href="(out-folder)/assets/fonts/fontawesome.min.css" rel="stylesheet">
+    <link href="(out-folder)/assets/fonts/solid.min.css" rel="stylesheet">
+    <link href="(out-folder)/assets/fonts/brands.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet">
+
+</head><body>
+	<script src="(out-folder)/assets/myjs.min.js?1760593278666"></script>
+	<script src="(out-folder)/assets/custom.sf.js?1760594829641"></script>
+
+    <script>
+        // Let's allow module from private CDN or somewhere
+        Blackprint.allowModuleOrigin('*');
+    </script>
+
+	<!-- src/routes/body.sf will be appended here -->
+</body></html>

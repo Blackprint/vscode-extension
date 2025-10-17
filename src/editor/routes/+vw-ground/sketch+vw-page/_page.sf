@@ -1,0 +1,807 @@
+## html
+<sketch-page>
+	<!-- This element will be replaced with 'My.space' -->
+	<sf-slot for="space"></sf-slot>
+
+	<!-- Panels -->
+	<div class="panels {{ !miniViewer.topRightHidden && 'has-minimap' }}">
+		<!-- /src/component/sketch-panel-left.sf -->
+		<sketch-panel-left></sketch-panel-left>
+
+		<!-- /src/component/sketch-panel-bottom.sf -->
+		<sketch-panel-bottom></sketch-panel-bottom>
+
+		<!-- /src/component/sketch-panel-right.sf -->
+		<sketch-panel-right></sketch-panel-right>
+	</div>
+
+	<sf-template path="BPExtensionEditor/component/project-navigation-bar.sf"></sf-template>
+
+	<div class="mini-blackprint disable-effect {{ miniViewer.topRightHidden && 'hidden' }}">
+		<!-- Will be replaced with element returned by Blackprint.cloneContainer(true) -->
+		<sf-slot for="miniViewer.topRight"></sf-slot>
+		<bp-minimap></bp-minimap>
+	</div>
+</sketch-page>
+
+## scss-global
+sketch-page{
+	.mini-blackprint{
+		width: 240px;
+		height: 195px;
+		position: absolute;
+		top: 0;
+		right: 0;
+		overflow: hidden;
+		box-shadow: 0 0 6px #ffffff6b;
+		background: #ffffff40;
+		border-radius: 10px;
+
+		sf-m[name="container"]{
+			pointer-events: none;
+		}
+
+		&.hidden{
+			display: none;
+		}
+	}
+
+	sf-m[name="container"] {
+		margin-left: 200px;
+	}
+
+	.top-left-info {
+		padding: 7px 10px;
+		margin: 10px;
+		color: #ffffff59;
+		font-size: 12px;
+		position: absolute;
+		top: 0;
+		left: 0;
+		background: #00000047;
+		box-shadow: 0 0 5px #000000b5;
+		border-radius: 10px;
+		white-space: pre-line;
+	}
+
+	.mini-blackprint, &.left-menu-hide {
+		sf-m[name="container"]{
+			margin-left: 0;
+		}
+	}
+
+	&> .bottom-message {
+		position: absolute;
+		bottom: 0;
+		color: #ababab;
+		width: 100%;
+		padding: 20px;
+		text-align: center;
+	}
+
+	&> .panels {
+		sketch-panel-left, sketch-panel-bottom, sketch-panel-right {
+			backdrop-filter: blur(1px);
+			box-shadow: 0 0 8px 0 black;
+		}
+	}
+
+	@media(max-width: 900px){
+		&> .bottom-message {
+			display: none;
+		}
+	}
+
+	&> sf-space[blackprint] .bg-tile{
+		background: url('./img/background/tile.png');
+		background-size: 100px;
+		filter: brightness(38%);
+		backface-visibility: hidden;
+		opacity: 0.5;
+		width: 100%;
+		height: 100%;
+		position: absolute;
+	}
+}
+
+## js-global.router
+={
+	on:{
+		async coming(data){ // data === views.data
+			// console.log("Sketch page data:", data);
+			let sketch = data.bpInstance ?? SketchList[data.page - 1];
+
+			if(sketch == null || sketch._abandon) return;
+			window.CurrentSketch = sketch;
+
+			$('body > .background .tile').css('display', 'none');
+
+			if(SketchSettings.showSketchMinimap){
+				let ref = sketch.page.miniViewer;
+				if(ref.topRight == null){
+					ref.topRight = sketch.cloneContainer(true); // Clone and get the MiniMap
+
+					// Remove the dropdown from minimap
+					$('sf-m[name="dropdown"]', ref.topRight).remove();
+				}
+
+				ref.topRightHidden = false;
+			}
+
+			sf.model('header').info.scale = sketch.scope('container').scale*100;
+
+			// Check if Data nodes already exist
+			// Load nodes for data manipulation
+			if(Blackprint.nodes.Data == null && !this._dataNodeChecked){
+				await sf.loader.task;
+				this._dataNodeChecked = true;
+
+				// Only load if not connected to remote Blackprint instance
+				if(CurrentSketch?._remote == null){
+					SmallNotif.add("Loading required nodes", 'yellow', 500);
+
+					if(localStorage['no-autoload-standard-nodes'] !== 'true'){
+						Blackprint.loadModuleFromURL([
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-console.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-data.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-decoration.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-flowcontrol.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-input.mjs?1',
+						], {
+							loadBrowserInterface: true
+						});
+					}
+				}
+			}
+		},
+		leaving(targetURL){
+			// console.log("Leaving from sketch page data:", arguments);
+
+			if(targetURL == null) return;
+			if(!/^\/sketch\//m.test(targetURL)){
+				$('body > .background .tile').css('display', '');
+				window.CurrentSketch = null;
+			}
+		}
+	}
+}
+
+## js-global
+// Blackprint.space = Space (https://github.com/ScarletsFiction/ScarletsFrame/wiki)
+// sketch.scope = shortcut to obtain your model scope/context
+var SketchList = [];
+sf.component('sketch-page', function(My){
+	My.miniViewer = {
+		topRight: null,
+		topRightHidden: true,
+		on$topRight(now){
+			if(now === null)
+				return My.miniViewer.topRightHidden = true;
+
+			My.miniViewer.topRightHidden = false;
+			// now => <sf-space>
+			// $(now)
+		}
+	};
+
+	// To avoid duplicated event registration on hot reload
+	let EventSlot = {slot: 'bp-editor'};
+
+	// URL: #page/sketch/{data.page}
+	let sketch;
+	if(views.data.bpInstance == null){
+		if(views.data.page.startsWith('node-')){
+			// Remove this page
+			setTimeout(()=>{
+				My.$el.parent('sf-page-view').remove();
+				views.lastSibling = null;
+			}, 500);
+
+			this.CurrentSketch = {
+				_abandon: true,
+				variables:{},
+				functions:{},
+				on(){}
+			};
+			My.panels = {};
+			return console.log("Returning to other page because bpInstance was not found");
+		}
+
+		sketch = My.sketch = SketchList[views.data.page - 1] ??= new Blackprint.Sketch();
+	}
+	else{
+		sketch = My.sketch = views.data.bpInstance;
+		setTimeout(() => My.fitToView(), 200);
+	}
+
+	sketch.on('destroy', EventSlot, function(){
+		let pageEl = $(sketch.scope.domList[0].closest('sketch-page').parentNode);
+
+		if(pageEl.hasClass('page-current')){
+			// views.goto('/sketch/1');
+			setTimeout(() => pageEl.remove(), 700);
+		}
+		else pageEl.remove();
+	});
+
+	window.CurrentSketch = sketch;
+	sketch.page = My;
+
+	// Will be filled by each panel component after initialized
+	My.panels = {left: null, bottom: null, right: null};
+
+	// Please use sketch.on('...', callback) instead
+	// This is used if no one listened to the event
+	sketch._event.$_fallback = BlackprintEventFallback;
+
+	// path: /src/global/SuggestNodeTypeCaster.js
+	sketch.on('port.cable.test', EventSlot, SuggestNodeTypeCaster);
+	sketch.on('port.hover node.hover', EventSlot, ev => {
+		ev.instance = sketch;
+
+		if(ev.port != null) PortHoverInfo(ev, true);
+		if(ev.iface != null) NodeHoverInfo(ev, true);
+	});
+	sketch.on('port.unhover node.unhover', EventSlot, ev => {
+		ev.instance = sketch;
+
+		if(ev.port != null) PortHoverInfo(ev, false);
+		if(ev.iface != null) NodeHoverInfo(ev, false);
+	});
+	sketch.on('port.menu', EventSlot, ev => {
+		let iface = ev.port.iface;
+
+		let cancel = {cancel: true};
+		async function getInput(title, text){
+			let ref = await Swal.fire({
+				title, text, input: "text",
+			});
+
+			if(ref.isConfirmed === false) return cancel;
+			return ref.value;
+		}
+
+		if(iface.interface === "BPIC/BP/Fn/Main"){
+			ev.menu.push({
+				title: "Rename Port",
+				async callback(){
+					let val = await getInput("Rename port", "Current name: "+ev.port.name);
+					if(val === cancel || !val) return;
+
+					if(iface[ev.port.source][val] != null){
+						SmallNotif.add("Conflicting port name", 'red');
+						return;
+					}
+
+					iface.renamePort(ev.port.source, ev.port.name, val);
+				}
+			});
+		}
+		else if(iface.interface === "BPIC/BP/Event/Emit"
+			|| iface.interface === "BPIC/BP/Event/Listen"
+		){
+			let portSource = iface.interface === "BPIC/BP/Event/Emit" ? 'input' : 'output';
+			ev.menu.push({
+				title: "Add Field",
+				async callback(){
+					let val = await getInput("Add event data's field");
+					if(val === cancel || !val) return;
+
+					if(iface[portSource][val] != null){
+						SmallNotif.add("Conflicting event field name", 'red');
+						return;
+					}
+
+					iface.createField(val);
+				}
+			});
+
+			if(ev.port.type !== Function && !(ev.port.source === 'input' && ev.port.name === 'Limit')){
+				ev.menu.push({
+					title: "Rename Field",
+					async callback(){
+						let val = await getInput("Add event data's field", "Current name: "+ev.port.name);
+						if(val === cancel || !val) return;
+
+						if(iface[portSource][val] != null){
+							SmallNotif.add("Conflicting event field name", 'red');
+							return;
+						}
+
+						iface.renameField(ev.port.name, val);
+					}
+				});
+				ev.menu.push({
+					title: "Delete Field",
+					async callback(){
+						iface.deleteField(ev.port.name);
+					}
+				});
+			}
+		}
+	});
+
+	sketch.on('cable.created cable.drag', EventSlot, ({ event, cable }) => {
+		if(event == null)
+			return; // Skip if cable is not created manually by user
+
+		sketch.once('cable.dropped cable.connect cable.deleted', listen);
+		function listen(){
+			sketch.off('cable.dropped cable.connect cable.deleted', listen);
+
+			let nodesContainer = CurrentSketch.scope('nodes');
+			nodesContainer.$el('.bp-suggest-light').removeClass('bp-suggest-light');
+		}
+
+		let port = cable.owner;
+		let type = port.virtualType || port.type;
+		let target = port.source === 'input' ? 'output' : 'input';
+
+		let list = sketch.ifaceList;
+		for (let i=0; i < list.length; i++) {
+			let temp = list[i];
+			let ports = temp[target];
+			if(ports == null) continue;
+
+			for (let key in ports) {
+				let port = ports[key];
+				if(type === (port.virtualType || port.type)){
+					port.iface.$el.addClass('bp-suggest-light');
+				}
+			}
+		}
+	});
+
+	function simplifyNamespacePath(list, _deep=0){
+		let len = 0, val = null;
+		for(let key in list) len++;
+		for(var key in list) {
+			val = list[key];
+			if(val.constructor === Object){
+				let {
+					len: _len,
+					key: _key,
+					list: _list,
+					val: _val
+				} = simplifyNamespacePath(val, _deep+1);
+
+				if(_deep !== 0 && len === 1 && _len === 1){
+					delete list[key];
+					key = key+'/'+_key;
+					list[key] = _val;
+					val = _val;
+				}
+			}
+		}
+
+		if(_deep === 0) return list;
+		return { len, key, list, val };
+	}
+
+	sketch.on('cable.dropped', EventSlot, ev => {
+		let event = ev.event;
+
+		if(event.ctrlKey || !ev.afterCreated || ev.cable.isRoute) return;
+		if(event.pointerType === 'touch'){
+			let targetEl = document.elementFromPoint(event.clientX, event.clientY);
+			if(targetEl.closest('sf-m[name="cables"]') == null) return;
+		}
+		else if(event.target.parentNode.model !== sketch.scope('cables')) return;
+
+		let ifaceList = sketch.ifaceList;
+		let oldLastNode = ifaceList[ifaceList.length-1];
+
+		SketchPages._cableDropMenu = ev.cable;
+		setTimeout(()=> SketchPages._cableDropMenu = null, 300);
+
+		let suggestedNode = simplifyNamespacePath(Blackprint.Sketch.suggestNodeForPort(ev.port));
+
+		// Suggest for object deconstruction node
+		let portType = ev.port.type;
+		if(portType instanceof Object && portType !== Blackprint.Types.Route && portType !== Blackprint.Types.Trigger){
+			let refA = suggestedNode;
+			let refB = Blackprint.nodes;
+
+			refA.Data ??= {};
+			refA.Data.Object ??= {};
+			refA.Data.Object.Get = refB.Data.Object.Get;
+			refA.Data.Object.Deconstructor = refB.Data.Object.Deconstructor;
+		}
+
+		container.nodeScope.menu(event, suggestedNode, {
+			onCreated(iface){
+				let owner = ev.cable.owner;
+				let sourcePort = owner.source;
+				let targetPorts = iface[sourcePort === 'input' ? 'output' : 'input'];
+				let compatiblePorts = [];
+
+				if(targetPorts == null) return;
+
+				for(let key in targetPorts){
+					let port = targetPorts[key];
+					if(isConnectablePort(owner.type, port.type))
+						compatiblePorts.push(port);
+				}
+
+				// Auto connect if found only one compatible port
+				if(compatiblePorts.length === 1)
+					compatiblePorts[0].connectCable(ev.cable);
+				else { // Drop near the port
+					let posX = sourcePort === 'input' ? 20 : -20;
+					ev.cable.head2[0] += posX;
+				}
+			},
+			suggest: true,
+		});
+	});
+
+	sketch.on('editor.properties.open', ()=> {
+		My.panels.right.openPanel();
+	});
+
+	sketch.on('node.function.open', EventSlot, async ev => {
+		let name = ev.iface.namespace.split('/').join('-');
+		name += '-'+ev.iface.uniqId;
+
+		let tabInfo = sketch.tabInfo ?? sketch.rootInstance.tabInfo;
+		let tabId = tabInfo.id;
+
+		let pages = $('vw-page > sf-page-view', views.rootDOM);
+		let routePath = `/sketch/${tabId}-node-`+name;
+
+		// Remove old page if the instance was different
+		for (let i=0; i < pages.length; i++) {
+			let page = pages[i];
+			if(page.routePath === routePath && page.querySelector('sketch-page').model.sketch !== ev.iface.bpInstance)
+				page.remove();
+		}
+
+		await views.goto(routePath, {
+			bpInstance: ev.iface.bpInstance
+		});
+
+		tabInfo.currentRoute = routePath;
+		ev.iface.bpInstance.recalculatePosition();
+	});
+
+	// This may cause one memory leak because this will never being cleared
+	// But will only be replaced if the user is clicked other nodes
+	sketch.on('node.click', EventSlot, ev => {
+		My.panels.right.selectNode(ev.iface);
+		NodeHoverInfo(ev, false);
+	});
+
+	sketch.on('execution.paused', EventSlot, ({ cable, cables, afterNode, beforeNode, triggerSource }) => {
+		let bottomPanel = My.panels.bottom;
+		let portValueDisplay = My.$el('editor-display-port-value');
+		bottomPanel.stepModeIsRequesting = false;
+
+		My.$el('.debug-after-node, .debug-next, .debug-cable')
+			.removeClass('debug-after-node')
+			.removeClass('debug-cable')
+			.removeClass('debug-next');
+
+		if(cable != null){
+			let el = sketch.scope('cables').list.getElement(cable);
+			$('path', el).addClass('debug-cable');
+
+			beforeNode?.iface.$el.addClass('debug-next');
+			afterNode?.iface.$el.addClass('debug-after-node');
+
+			let { input, output } = cable;
+
+			// 0 = execution order, 1 = route, 2 = trigger port, 3 (ToDo) = request
+			if(triggerSource === 1){ // route
+				bottomPanel.noteTitle = `Routing: `;
+				bottomPanel.note = `${output.iface.title} -> ${input?.iface.title || "Stop"}`;
+			}
+			else if(triggerSource === 2){ // trigger port
+				bottomPanel.noteTitle = `Calling Trigger: `;
+				bottomPanel.note = `${output.iface.title} -> ${input.iface.title}`;
+			}
+			else if(triggerSource === 3){ // request
+				bottomPanel.noteTitle = `Request Value: `;
+				bottomPanel.note = `${input.iface.title} -> ${output.iface.title}`;
+				bottomPanel.stepModeIsRequesting = true;
+			}
+		}
+		else if(beforeNode != null){ // triggerSource == 0 (execution order)
+			if(cables != null){
+				let cableList = sketch.scope('cables').list;
+				for(let i=0; i < cables.length; i++){
+					let el = cableList.getElement(cables[i]);
+					$('path', el).addClass('debug-cable');
+				}
+			}
+
+			beforeNode.iface.$el.addClass('debug-next');
+			bottomPanel.noteTitle = `Updating: `;
+			bottomPanel.note = `${beforeNode.iface.title}`;
+		}
+
+		if(!bottomPanel.stepModeIsRequesting){
+			// Remove all port value display element from the last pause session
+			My.$el('editor-display-port-value').remove();
+		}
+		else { // Update output port value
+			for(let i=0; i < portValueDisplay.length; i++){
+				let display = portValueDisplay[i];
+				let port = display.parentNode.model;
+				display.model.setValue(port._cache ?? port.value ?? port.default);
+			}
+		}
+
+		// Display every port value
+		if(beforeNode != null) showPortValue(beforeNode);
+		if(afterNode != null && triggerSource !== 0) showPortValue(afterNode);
+		else if(cables != null){
+			for(let i=0; i < cables.length; i++){
+				showPortValue(cables[i].output.iface.node);
+			}
+		}
+
+		if(cable == null && cables == null) { // Idle
+			bottomPanel.noteTitle = `Running...`;
+			bottomPanel.note = ``;
+			bottomPanel.stepModeIsRequesting = false;
+		}
+	});
+
+	sketch.on('execution.terminated', EventSlot, ({ reason, iface }) => {
+		SmallNotif.add(reason, 'red');
+		let bottomPanel = My.panels.bottom;
+		bottomPanel.opened = true;
+		bottomPanel.noteTitle = "Execution stopped";
+	});
+
+	function showPortValue(node){
+		let { input, output } = node.iface;
+		for(let key in input){
+			let port = input[key];
+			let value = port._cache ?? port._oldCache ?? port.value ?? port.default;
+
+			// Only show value from primitive type and null/empty and no port feature
+			if(port.feature != null || value != null
+				&& port.type !== String
+				&& port.type !== Boolean
+				&& port.type !== Number) continue;
+
+			port.insertComponent(null, 'editor-display-port-value', { value });
+		}
+
+		for(let key in output){
+			let port = output[key];
+			let value = port.value ?? port.default;
+
+			// Only show value from primitive type and null/empty and no port feature
+			if(port.feature != null || port.type === Function || value != null
+				&& port.type !== String
+				&& port.type !== Boolean
+				&& port.type !== Number) continue;
+
+			port.insertComponent('.name', 'editor-display-port-value', { value });
+		}
+	}
+
+	Blackprint.settings('visualizeFlow', true);
+	My.space ??= sketch.cloneContainer();
+
+	let SketchPages = sf.model('sketch-pages');
+	let container = sketch.scope('container');
+	let header = sf.model('header');
+
+	container.hideUnusedPort = sf.model('sketch-settings').hideUnusedPort;
+
+	container.onScale = function(scale){
+		header.info.scale = Math.round(scale * 100);
+	}
+
+	// Will run when <sketch-page> inserted on DOM
+	My.init = async function(){
+		let sfm = $(My.space.firstElementChild);
+
+		// Show module version
+		if(true){
+			let sketch = $('script[src*="@blackprint/sketch"]').attr('src').match("(?<=@)([0-9\.]+)")?.[0];
+			let engine = $('script[src*="@blackprint/engine"]').attr('src').match("(?<=@)([0-9\.]+)")?.[0];
+			let remote = $('script[src*="@blackprint/remote-control"]').attr('src').match("(?<=@)([0-9\.]+)")?.[0];
+			let codegen = $('script[src*="@blackprint/code-generation"]').attr('src').match("(?<=@)([0-9\.]+)")?.[0];
+
+			if(location.pathname.startsWith('/dev.html')) remote ??= 0; // We have remote module imported on dev mode
+
+			sketch = 'Sketch: v' + $.escapeText(sketch || '-unknown');
+			engine = '\nEngine: v' + $.escapeText(engine || '-unknown');
+			remote = '\nRemote: v' + $.escapeText(remote || '-unknown');
+			codegen = '\nCodeGen: v' + $.escapeText(codegen || '-unknown');
+
+			sfm.prepend(`<div class="top-left-info">${sketch}${engine}${remote}${codegen}</div>`);
+		}
+
+		// Show tiled background
+		if(!sfm.eq(0).hasClass('bg-tile')){
+			sfm.prepend('<div class="bg-tile"></div>');
+		}
+
+		My.registerListener();
+	}
+
+	My.registerListener = function(){
+		function pointerOver(targetEl){
+			if(targetEl.tagName === 'path'){
+				targetEl.parentElement.model.disconnect();
+			}
+		}
+
+		function pmEvent(ev){
+			if(!ev.altKey) return temp.off('pointermove', pmEvent);
+			pointerOver(ev.target);
+		}
+		function tmEvent(ev){
+			if(!ev.altKey) return temp.off('touchmove', tmEvent);
+
+			let touch = ev.touches[0];
+			pointerOver(document.elementFromPoint(touch.clientX, touch.clientY));
+		}
+
+		let temp = My.$el('sf-m[name="cables"]');
+		let evRegistered = false;
+		temp.on('pointerdown', function(ev){
+			if(ev.altKey && !evRegistered){
+				evRegistered = true;
+				if(ev.pointerType === 'touch')
+					temp.on('touchmove', tmEvent);
+				else temp.on('pointermove', pmEvent);
+			}
+		})
+		.on('pointerup', function(ev){
+			if(evRegistered){
+				evRegistered = false;
+				if(ev.pointerType === 'touch')
+					temp.off('touchmove', tmEvent);
+				else temp.off('pointermove', pmEvent);
+			}
+		});
+
+		My.$el('sf-m[name="nodes"]').on('click', function(ev){
+			let textEl = ev.target;
+			if(textEl.tagName !== 'TEXTAREA') return;
+
+			let portEl = textEl.closest('.ports');
+			if(portEl == null) return;
+
+			let description = portEl.model.docs?.description;
+			if(description == null) return;
+			if(!/@menu\b/.test(description)) return;
+
+			let list = [];
+			description.replace(/-\s+\[(.*?)\]:\((.*?)\)\s+=\s+(.*?)$/gm, function(full, val, title, description){
+				list.push({
+					title, description, callback(){
+						$(textEl).val(val);
+						$(textEl).trigger('input');
+					},
+				});
+			});
+
+			DropDown.show(list, {element: textEl});
+		});
+	}
+
+	My.fitToView = async function(){
+		await $.afterRepaint;
+		await sketch.recalculatePosition()
+		await $.afterRepaint;
+
+		let Ref = sketch.scope('container');
+		let {offsetHeight, offsetWidth} = Ref.$el[0].parentElement;
+		let nodes = Ref.nodeScope.list;
+		let maxX = 0, maxY = 0;
+		let W = 0, H = 0;
+
+		for (var i = 0; i < nodes.length; i++) {
+			let node = nodes[i];
+			if(maxX < node.x){
+				maxX = node.x;
+				W = node.w || 0;
+			}
+
+			if(maxY < node.y){
+				maxY = node.y;
+				H = node.h || 0;
+			}
+		}
+
+		maxX += W + 50;
+		maxY += H + 50;
+
+		if(maxX <= (Ref.origSize.w - 100) && maxY <= (Ref.origSize.h - 100)){
+			maxX = Ref.origSize.w;
+			maxY = Ref.origSize.h;
+		}
+		else{
+			maxX += 200;
+			maxY += 200;
+		}
+
+		let A = offsetWidth / maxX;
+		let B = offsetHeight / maxY;
+
+		let decidedScale = A < B ? A : B;
+		decidedScale = decidedScale*100;
+		decidedScale = decidedScale - (decidedScale % 5); // round decimal
+		decidedScale = decidedScale/100;
+
+		if(decidedScale === 0) {
+			console.log("Unexpected: scaling the container to zero");
+			decidedScale = 1;
+		}
+
+		Ref.scale = decidedScale > 1 ? 1 : decidedScale;
+
+		Ref.size.w = offsetWidth / decidedScale;
+		Ref.size.h = offsetHeight / decidedScale;
+
+		sf.model('header').info.scale = decidedScale*100;
+	}
+
+	My.importJSON = json => sketch.importJSON(json);
+	My.clearNodes = ()=> sketch.clearNodes();
+
+	My.cloneContainer = function(){
+		let title = sketch.parentInterface != null ? `"${sketch.parentInterface.title}" Function` : `Main`;
+
+		// Clone into new window
+		new sf.Window({
+			title: `Sketch: ${title}`,
+			templateHTML: sketch.cloneContainer() // Clone 2
+		});
+	}
+
+	sketch.on('node.menu', function({ iface, menu }){
+		if(!iface.namespace.startsWith('BPI/F/') && !iface.namespace.startsWith('BP/')){
+			menu.unshift({
+				title: "View source code",
+				async callback(){
+					let { code, githubURL, scopeURL } = await utils.openNodeSource(iface);
+					if(!code) return;
+
+					let editor = sf.model('custom-node-editor');
+					editor.setValue(code);
+
+					let githubRepoName = githubURL?.match(/\/\/cdn.jsdelivr.net\/gh\/(.*?)@/)?.[1];
+					if(githubRepoName)
+						editor.githubURL = `https://github.com/${githubRepoName}/blob/-/src/${iface.namespace}.js`;
+					else editor.githubURL = '';
+
+					Modal.goto('/custom-node-editor');
+				}
+			});
+		}
+
+		menu.unshift({
+			title: !iface.id ? "Add ID" : "Modify ID",
+			async callback(){
+				let ref = await Swal.fire({
+					title: "Write the new ID here",
+					text: (iface.id ? "Current ID: "+iface.id : void 0),
+					input: "text",
+				});
+
+				if(ref.isConfirmed === false) return;
+
+				let sketch = iface.node.instance;
+				let val = ref.value;
+
+				if(val === ''){
+					iface.node.instance.changeNodeId(iface, val);
+					return;
+				}
+
+				if(sketch.iface[val] !== void 0)
+					throw new Error("ID already exist");
+
+				iface.node.instance.changeNodeId(iface, val);
+			}
+		});
+	});
+});

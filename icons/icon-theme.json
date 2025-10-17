@@ -1,0 +1,12 @@
+{
+  "iconDefinitions": {
+    "bpi-icon": {
+      "iconPath": "./bpi-icon.png"
+    }
+  },
+  "fileExtensions": {
+    "bpi": "bpi-icon"
+  },
+  "folder": "_default",
+  "file": "_default"
+}

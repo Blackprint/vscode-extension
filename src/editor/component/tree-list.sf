@@ -1,0 +1,71 @@
+This tree list accept: {
+	Key: {
+		DeepKey: {...}
+	}
+}
+
+## html
+<tree-list class="tree-list-menu {{ hidden ? 'hidden' : '' }}">
+	<div class="tree-item" sf-each="key, val in deep" tree-item-key="{{ key }}">
+		<div class="title" @click="collapse(this)"><i class="fa tree-icon"></i> {{ key }}</div>
+		{{@if hasChild(val):
+			return new $TreeList({
+				parentKey: parentKey, key, val, hasChild: hasChild, onToggle: onToggle
+			});
+		}}
+	</div>
+</tree-list>
+
+## scss-global
+.tree-list-menu.hidden {
+	display: none;
+}
+
+.tree-item{
+	padding-left: 20px;
+	&.has-child {
+		padding-left: 10px;
+	}
+	.title {
+		user-select: none;
+		cursor: pointer;
+	}
+}
+
+.tree-item.has-child > .title .tree-icon:before {
+	color: gray;
+	content: "\f0d7";
+	padding-right: 5px;
+}
+
+.tree-item.has-child.collapsed > .title .tree-icon:before {
+	content: "\f0da";
+}
+
+## js-global
+sf.component('tree-list', {template: #this.path}, function(My, include, $item={}){
+	My.parentKey = $item.parentKey ?? '';
+	My.parentKey += $item.key && My.parentKey !== '' ? `/${$item.key}` : ($item.key ?? '');
+
+	My.deep = $item.val ?? {};
+	My.hidden = true;
+	My.hasChild = $item.hasChild ?? (obj => obj.constructor === Object);
+	My.onToggle = $item.onToggle ?? function(){};
+
+	My.init = function(){
+		My.$el.parent().addClass("has-child").addClass("collapsed");
+	}
+
+	My.collapse = function(el){
+		el = el.nextElementSibling;
+		if(el == null) return;
+
+		let hidden = el.model.hidden = !el.model.hidden;
+
+		if(hidden)
+			$(el.parentNode).addClass("collapsed");
+		else $(el.parentNode).removeClass("collapsed");
+
+		My.onToggle(hidden);
+	}
+});
