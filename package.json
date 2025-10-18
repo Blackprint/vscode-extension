@@ -3,7 +3,10 @@
   "private": true,
   "displayName": "Blackprint Visual Programming",
   "author": "StefansArya",
+  "publisher": "Blackprint",
   "description": "Blackprint Editor for VSCode",
+  "license": "MIT",
+  "icon": "icons/logo.png",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.78.0"
@@ -99,6 +102,16 @@
       }
     ]
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Blackprint/vscode-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Blackprint/vscode-extension/issues"
+  },
+  "sponsor": {
+    "url": "https://github.com/sponsors/stefansarya"
+  },
   "main": "./src/extension/index.js",
   "scripts": {
     "start": "gulp",
@@ -106,12 +119,7 @@
     "update-editor-asset-dependency": "node ./src/utils/update-editor-asset-dependency.js"
   },
   "dependencies": {
-    "@melloware/coloris": "^0.25.0",
-    "scarletsframe": "^0.35.26",
-    "vscode-ext-codicons": "^1.0.0",
-    "vscode-ext-decoration": "1.1.0",
-    "vscode-ext-help-and-feedback-view": "^1.0.1",
-    "vscode-ext-selection": "1.1.0"
+    "scarletsframe": "^0.35.x"
   },
   "devDependencies": {
     "@babel/core": "^7.23.9",

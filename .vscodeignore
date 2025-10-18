@@ -1,4 +1,11 @@
 .vscode/**
 .vscode-test/**
+node_modules/**
+example/**
 .gitignore
 vsc-extension-quickstart.md
+**/.github/
+**/.git/**
+**/.git
+package-lock.json
+pnpm-lock.yaml

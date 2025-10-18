@@ -1,23 +1,24 @@
-# Blackprint VSCode Extension
+<h1 align="center">Blackprint for Visual Studio Code</h1>
+<p align="center">
+Blackprint brings the power of visual programming directly to your VS Code environment. Create workflows or programs by connecting nodes directly from your editor.
+</p>
 
-Blackprint VSCode Extension brings the power of visual programming directly to your VS Code environment. Create complex workflows and programs by connecting nodes in an intuitive drag-and-drop interface, perfect for visual scripting, data processing, and creative coding.
+<p align="center">
+  <a href='https://github.com/Blackprint/Blackprint/blob/master/LICENSE'><img src='https://img.shields.io/badge/License-MIT-brightgreen.svg' height='20'></a>
+</p>
 
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-
-https://github.com/user-attachments/assets/0bc1ae92-2091-420a-9fe7-10293a24744f
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/0bc1ae92-2091-420a-9fe7-10293a24744f" controls><p align="center">View the preview video on <a href="https://github.com/user-attachments/assets/0bc1ae92-2091-420a-9fe7-10293a24744f">new tab</a></p></video>
+</p>
 
 ## Features
-
-- **Node-based Visual Editor**: Create visual programs by connecting nodes in an intuitive drag-and-drop interface
-- **Custom File Support**: Display Blackprint Editor for `.bpi` (Blackprint Instance) files
+- **Node-based Visual Editor**: Create visual programs by connecting nodes with drag-and-drop interface
+- **Custom File Support**: Editor support for `.bpi` (Blackprint Instance) extension files
 - **Real-time execution and modification**: See your visual programs come to life as you build them with remote engine support
-- **Extensible Architecture**: Add custom nodes and modules to extend functionality
+- **Extensible Architecture**: Add custom nodes and modules to extend functionality of visual programming
 
-## 🛠️ Installation & Setup
-
-### Prerequisites
-
-Make sure you have Node.js (v20 or higher) installed. Then install the required Blackprint modules:
+## Prerequisites
+Make sure you have Node.js (v20 or higher) installed and make sure the required Blackprint modules already installed to your current workspace:
 
 ```sh
 # Install core Blackprint modules and cli-tools
@@ -31,10 +32,9 @@ npm i socket.io @blackprint/remote-control
 ```
 
 ### Configure Your Project
-
 Let the extension know which modules to automatically load by adding this to your `package.json`:
 
-```json
+```js
 // package.json
 {
   "name": "your-project",
@@ -67,7 +67,7 @@ Let the extension know which modules to automatically load by adding this to you
 The extension provides several configuration options in VS Code settings:
 
 ### Runtime Configuration
-```json
+```js
 {
   // What do you want to use for executing .bpi files?
   "blackprint.runtime": "Node.js", // or "Bun"
@@ -83,28 +83,31 @@ The extension provides several configuration options in VS Code settings:
 ## Additional Features
 
 ### Skeleton Nodes
-
 Skeleton nodes allow the Editor to understand available nodes and provide placeholder node.
 
-```json
+```js
 // blackprint.skeleton.json
 {
-  "nodes": {
+  "nodes": { // Node namespace tree
     "Example": {
       "Button": {
+        // Example/Button/Simple
         "Simple": {
-          "$input": {},
+          // "$port": { "name": "type" }
+          "$input": { },
           "$output": {
             "Clicked": "BP.Trigger"
           }
         }
       },
       "Display": {
+        // Example/Display/Logger
         "Logger": {
+          // "$port": { "name": "type" }
           "$input": {
             "Text": "String"
           },
-          "$output": {}
+          "$output": { }
         }
       }
     }
