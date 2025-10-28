@@ -1,8 +1,8 @@
 ## html
 <!-- Filling the default page if haven't being routed -->
 <sf-m name="welcome-text" class="welcome-text">
-	<h1>Welcome to Blackprint Editor in Visual Studio Code!</h1>
-	<div class="description">It seems there are an error that cause you to see this message instead of the editor.</div>
+	<h1>Loading Blackprint Editor</h1>
+	<div class="description">If you're stuck on this page, it seems there's an error in the editor, which you can view in VSCode's devtools.</div>
 </sf-m>
 
 ## scss-global

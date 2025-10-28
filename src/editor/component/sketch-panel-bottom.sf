@@ -15,11 +15,11 @@
 			</div>
 			<div @click="sketchRefresh" title="Recalculate cable and node position" class="button" ><i class="fa fa-sitemap"></i> Refresh</div>
 			<div @click="runBlackprintCLI" title="Run this file as an entry file on your CLI" class="button"><i class="fa fa-terminal"></i> Run in CLI</div>
-			<div @click="connectRemote" title="Connect to remote engine and control/debug it from this editor" class="button"><i class="fa fa-satellite-dish"></i> Remote</div>
+			<div @click="connectRemote" title="Connect to remote engine and control/debug it from this editor" class="button {{ RemoteSketchConnect.isConnected ? 'socket-connected' : '' }}"><i class="fa fa-satellite-dish"></i> Remote</div>
 		</div>
 		<div class="description">
 			<div class="debug-desc">{{ noteTitle }} <span>{{ note }}</span></div>
-			Access to any external URL or remote engine requires prior whitelisting in the editor settings
+			<div>If you want to access to any external URL or remote engine you must whitelist on editor settings first</div>
 		</div>
 	</div>
 </sketch-panel-bottom>
@@ -89,6 +89,10 @@ sketch-page > .panels sketch-panel-bottom {
 				&.active {
 					color: yellow;
 				}
+
+				&.socket-connected {
+					color: lightgreen;
+				}
 			}
 		}
 
@@ -150,6 +154,7 @@ sf.component('sketch-panel-bottom', {template: #this.path}, function(My){
 	My.noteTitle = '';
 	My.note = '';
 	My.stepModeIsRequesting = '';
+	My.RemoteSketchConnect = sf.model('modal-remote-sketch-connect');
 
 	My.beforeInit = async function(){
 		await new Promise(resolve => {
@@ -276,9 +281,36 @@ sf.component('sketch-panel-bottom', {template: #this.path}, function(My){
 		vscode.postMessage({ type: 'runBlackprintCLI', data: { withRemote: false } });
 	}
 
-	My.connectRemote = function(){
-		vscode.postMessage({ type: 'runBlackprintCLI', data: { withRemote: true } });
-		vscode.postMessage({ type: 'runSocketRelay' });
+	My.connectRemote = async function(){
+		let confirm = await Swal.fire({
+			title: "Remote Control",
+			text: "Do you want to run this instance on your CLI and connect it to this editor, or just run the relay server to connect to a different remote engine?",
+			confirmButtonText: 'Run and connect',
+			denyButtonText: 'Relay server only',
+			cancelButtonText: My.RemoteSketchConnect.isConnected ? 'Open tools' : 'Connect to...',
+			denyButtonColor: 'gray',
+			cancelButtonColor: 'gray',
+			showDenyButton: true,
+			showCancelButton: true,
+			showCloseButton: true
+		});
+
+		if(confirm.isDismissed && confirm.dismiss === 'backdrop')
+			return;
+
+		let option = {};
+		if(confirm.isConfirmed){ // Run and connect
+			vscode.postMessage({ type: 'runBlackprintCLI', data: { withRemote: true } });
+		}
+		else if(confirm.isDenied){ // Relay server only
+			vscode.postMessage({ type: 'runSocketRelay' });
+		}
+		else { // Open remote tools
+			if(sf.model('modal-remote-sketch-connect').socket?.connected){
+				Modal.goto('/remote-sync');
+			}
+			else Modal.goto('/remote-sketch-connect');
+		}
 	}
 
 	My.openPanel = function(){

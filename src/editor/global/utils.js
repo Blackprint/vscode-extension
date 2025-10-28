@@ -95,10 +95,10 @@ utils.openNodeSource = async function(node){
 	return { code: result, githubURL, scopeURL: nodes._scopeURL };
 }
 
-utils.exportCurrentFile = function(options = {}){
-	let sketch = CurrentSketch.rootInstance ?? CurrentSketch;
+utils.exportCurrentFile = function(options = {}, sketch = null){
+	sketch ??= CurrentSketch.rootInstance ?? CurrentSketch;
 	let opt = Object.assign(options, {environment: false, toRawObject: true});
-	let json = sketch.exportJSON(opt);
+	let json = Blackprint.Sketch.prototype.exportJSON.call(sketch, opt);
 
 	// Scan all used nodes and obtain the modules path
 	let namespaces = new Set();
@@ -115,22 +115,43 @@ utils.exportCurrentFile = function(options = {}){
 
 	delete json.environments; // Just double check as we must not export environment data
 
-	let moduleJS = json.moduleJS = [];
+	let moduleJS = [];
 	for (let item of namespaces) {
 		let module_ = utils.getDeepProperty(Blackprint.nodes, item.split('/'))?._scopeURL;
 		if(module_) moduleJS.push(module_);
 	}
 
+	let npmModules = Object.values(blackprintModules);
 	for (let i=moduleJS.length-1; i >= 0; i--) {
 		let decodedURI = decodeURIComponent(decodeURIComponent(moduleJS[i]));
 		let replace = blackprintModules[decodedURI];
+
 		if(replace) moduleJS[i] = replace;
-		else moduleJS.splice(i, 1);
+		else {
+			if(decodedURI.startsWith('http') && !decodedURI.includes('vscode-resource.vscode-cdn.net')) {
+				moduleJS[i] = decodedURI;
+			}
+			else {
+				let hasMatch = null;
+				for (let j=0; j < npmModules.length; j++) {
+					if(decodedURI.includes(`/${npmModules[j]}/`)) {
+						hasMatch = npmModules[j];
+						break;
+					}
+				}
+				if(hasMatch) moduleJS[i] = hasMatch + decodedURI.split(hasMatch).pop();
+				else moduleJS.splice(i, 1);
+			}
+		}
 	}
 
+	json.moduleJS = Array.from(new Set(moduleJS));
 	return json;
 }
 
+utils.customExportJSON = function(options = {}){
+	return utils.exportCurrentFile(options, this);
+}
 
 utils.getDeepProperty = function(obj, path, reduceLen=0){
 	for(let i = 0, n = path.length-reduceLen; i < n; i++){
@@ -171,8 +192,19 @@ Blackprint.DepsLoader.NodeModulesResolver = async(name, type) => {
 	}
 }
 
+function urlResolverBlocked(url, type){
+	if(!url.includes('/npm/@melloware/coloris') && !url.includes('/npm/canvas-confetti')){
+		console.log(`URL Blocked: ` + url);
+	}
+
+	if(type === 'js') return vscodeOutPath + '/assets/empty.js';
+	if(type === 'css') return vscodeOutPath + '/assets/empty.css';
+	throw new Error("Unknown type: " + type);
+}
+
+// The webview is using CSP, and isolated for security
 Blackprint.DepsLoader.URLResolver = async(url, type) => {
-	if(url.startsWith('http')) return null; // CSP Blocked, the webview is isolated for security
-	if(url.startsWith('files')) return null; // CSP Blocked, the webview is isolated for security
+	if(url.startsWith('http')) return urlResolverBlocked(url, type);
+	if(url.startsWith('files')) return urlResolverBlocked(url, type);
 	return url;
 }

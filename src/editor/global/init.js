@@ -116,10 +116,29 @@ window.addEventListener('message', event => {
 		utils.resolvedNpmModule[data.name].resolve?.(data.url);
 		utils.resolvedNpmModule[data.name] = data.url
 	}
-	else if (action.type === 'runCLICallback') {
+	else if (action.type === 'runBlackprintCLICallback') {
 		if(action.data.success){
 			SmallNotif.add("Executed on terminal", 'green');
-			console.log(action.data.port)
+
+			if(action.data.port){
+				let model = sf.model('modal-remote-sketch-connect');
+				model.url = `ws://localhost:${action.data.port}`;
+				Modal.goto('/remote-sketch-connect');
+			}
+		}
+		else {
+			SmallNotif.add(action.data.error, 'red');
+		}
+	}
+	else if (action.type === 'runSocketRelayCallback') {
+		if(action.data.success){
+			SmallNotif.add("Relay server started on terminal", 'green');
+
+			if(action.data.port){
+				let model = sf.model('modal-remote-sketch-connect');
+				model.url = `ws://localhost:${action.data.port}`;
+				Modal.goto('/remote-sketch-connect');
+			}
 		}
 		else {
 			SmallNotif.add(action.data.error, 'red');

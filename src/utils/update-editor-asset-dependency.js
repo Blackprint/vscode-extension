@@ -2,23 +2,35 @@ let fs = require('fs');
 
 !(async () => {
     let download = {
+        // === ScarletsFrame framework ===
+        "scarletsframe.modern.js": "https://cdn.jsdelivr.net/npm/scarletsframe@0.35.28/dist/scarletsframe.modern.js",
+        "scarletsframe.modern.js.map": "https://cdn.jsdelivr.net/npm/scarletsframe@0.35.28/dist/scarletsframe.modern.js.map",
+
         // === Blackprint Engine ===
-        "code-generation.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.9/dist/code-generation.min.js",
-        "code-generation.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.9/dist/code-generation.min.js.map",
-        "engine.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.9/dist/engine.min.js",
-        "engine.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.9/dist/engine.min.js.map",
-        "skeleton.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.9/dist/skeleton.min.js",
-        "skeleton.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.9/dist/skeleton.min.js.map",
+        // "code-generation.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.10/dist/code-generation.min.js",
+        // "code-generation.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.10/dist/code-generation.min.js.map",
+        "engine.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.10/dist/engine.min.js",
+        "engine.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.10/dist/engine.min.js.map",
+        "skeleton.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.10/dist/skeleton.min.js",
+        "skeleton.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/engine@0.10/dist/skeleton.min.js.map",
+
+        // === Blackprint Remote Control ===
+        "remote-control.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/remote-control@0.2.0/dist/remote-control.min.js",
+        "remote-control.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/remote-control@0.2.0/dist/remote-control.min.js.map",
+        "remote-control.sf.css": "https://cdn.jsdelivr.net/npm/@blackprint/remote-control@0.2.0/dist/remote-control.sf.css",
+        "remote-control.sf.css.map": "https://cdn.jsdelivr.net/npm/@blackprint/remote-control@0.2.0/dist/remote-control.sf.css.map",
+        "remote-control.sf.js": "https://cdn.jsdelivr.net/npm/@blackprint/remote-control@0.2.0/dist/remote-control.sf.js",
+        "remote-control.sf.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/remote-control@0.2.0/dist/remote-control.sf.js.map",
 
         // === Blackprint Sketch ===
-        "blackprint.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.9/dist/blackprint.min.js",
-        "blackprint.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.9/dist/blackprint.min.js.map",
-        "blackprint.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.9/dist/blackprint.min.js",
-        "blackprint.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.9/dist/blackprint.min.js.map",
-        "blackprint.sf.js": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.9/dist/blackprint.sf.js",
-        "blackprint.sf.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.9/dist/blackprint.sf.js.map",
-        "blackprint.sf.css": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.9/dist/blackprint.sf.css",
-        "blackprint.sf.css.map": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.9/dist/blackprint.sf.css.map",
+        "blackprint.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.10/dist/blackprint.min.js",
+        "blackprint.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.10/dist/blackprint.min.js.map",
+        "blackprint.min.js": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.10/dist/blackprint.min.js",
+        "blackprint.min.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.10/dist/blackprint.min.js.map",
+        "blackprint.sf.js": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.10/dist/blackprint.sf.js",
+        "blackprint.sf.js.map": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.10/dist/blackprint.sf.js.map",
+        "blackprint.sf.css": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.10/dist/blackprint.sf.css",
+        "blackprint.sf.css.map": "https://cdn.jsdelivr.net/npm/@blackprint/sketch@0.10/dist/blackprint.sf.css.map",
 
         // === Other library ===
         "lodash.min.js": "https://cdn.jsdelivr.net/npm/lodash@4/lodash.min.js",
@@ -43,6 +55,7 @@ let fs = require('fs');
         "timeplate.min.js.map": "https://cdn.jsdelivr.net/npm/timeplate@0.1.0/dist/timeplate.min.js.map",
         "coloris.min.css": "https://cdn.jsdelivr.net/gh/mdbassit/Coloris@0.25.0/dist/coloris.min.css",
         "coloris.min.js": "https://cdn.jsdelivr.net/gh/mdbassit/Coloris@0.25.0/dist/coloris.min.js",
+        "socket.io.min.js": "https://cdn.socket.io/4.8.1/socket.io.min.js",
     };
 
     for (let key in download) {

@@ -45,7 +45,7 @@ class BlackprintViewerProvider {
       let pj = path.join(dir, 'package.json');
       if (fs.existsSync(pj)) {
         let packageJSON = JSON.parse(fs.readFileSync(pj, 'utf8'));
-        if (packageJSON.blackprint?.dependencies == null) return null;
+        if (packageJSON.blackprint?.dependencies == null) continue;
         blackprintModules = packageJSON.blackprint.dependencies;
       }
 
@@ -79,7 +79,7 @@ class BlackprintViewerProvider {
             }
           }
           else {
-            let url = decodeURIComponent(webviewPanel.webview.asWebviewUri(vscode.Uri.file(entryFile)));
+            let url = decodeURIComponent(webviewPanel.webview.asWebviewUri(vscode.Uri.file(`${target}/${entryFile}`)));
             modules[url] = name;
           }
         }
@@ -117,6 +117,9 @@ class BlackprintViewerProvider {
           type: 'loadSketch',
           data: { json: document.getText() }
         });
+      }
+      else if (action.type === 'openExtensionSettings'){
+        vscode.commands.executeCommand('workbench.action.openSettings', '@ext:Blackprint.blackprint-vscode-extension');
       }
       else if (action.type === 'unsavedChanges') {
         this.unsavedChanges(document, action.data.text);
@@ -188,6 +191,7 @@ class BlackprintViewerProvider {
     // Get the selected runtime from VSCode settings
     const config = vscode.workspace.getConfiguration('blackprint');
     const runtime = config.get('runtime', 'node');
+    let remotePort = withRemote ? 8745 : null;
 
     // Show confirmation message with runtime information
     let confirmation = await vscode.window.showWarningMessage(
@@ -209,7 +213,7 @@ class BlackprintViewerProvider {
     // Execute the appropriate command based on the selected runtime
     try {
       let command;
-      const remoteArg = withRemote ? `--remote=8745` : '';
+      const remoteArg = withRemote ? `--remote=`+remotePort : '';
 
       switch(runtime) {
         case 'Node.js':
@@ -223,7 +227,7 @@ class BlackprintViewerProvider {
       }
 
       // Execute the command in the terminal
-      const terminal = vscode.window.createTerminal('Blackprint Runner');
+      const terminal = vscode.window.createTerminal('Blackprint: ' + path.basename(filePath));
       terminal.sendText(command);
       terminal.show(true);
 
@@ -231,7 +235,7 @@ class BlackprintViewerProvider {
         type: 'runBlackprintCLICallback',
         data: {
           success: true,
-          port: withRemote,
+          port: remotePort,
           runtime: runtime,
           command: command
         }
@@ -249,6 +253,7 @@ class BlackprintViewerProvider {
   }
 
   async runSocketRelay(filePath, webviewPanel){
+    let remotePort = 8748;
     let confirmation = await vscode.window.showWarningMessage("Are you sure to run Blackprint Relay Server on your terminal?\nMake sure you're aware of this action.", 'Allow', 'Reject');
     if(confirmation !== 'Allow') {
       webviewPanel.webview.postMessage({
@@ -261,13 +266,32 @@ class BlackprintViewerProvider {
       return;
     }
 
-    webviewPanel.webview.postMessage({
-      type: 'runSocketRelayCallback',
-      data: {
-        success: true,
-        port: withRemote,
-      }
-    });
+    try {
+      const remoteArg = remotePort ? `--remote=`+remotePort : '';
+      let command = `npx blackprint run:relay ${remoteArg}`;
+
+      // Execute the command in the terminal
+      const terminal = vscode.window.createTerminal('Blackprint Relay Server');
+      terminal.sendText(command);
+      terminal.show(true);
+
+      webviewPanel.webview.postMessage({
+        type: 'runSocketRelayCallback',
+        data: {
+          success: true,
+          port: remotePort,
+        }
+      });
+
+    } catch (error) {
+      webviewPanel.webview.postMessage({
+        type: 'runSocketRelayCallback',
+        data: {
+          success: false,
+          error: `Failed to execute Blackprint: ${error.message}`,
+        }
+      });
+    }
   }
 }
 

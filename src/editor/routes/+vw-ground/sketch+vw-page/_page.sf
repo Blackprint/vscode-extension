@@ -142,11 +142,11 @@ sketch-page{
 
 					if(localStorage['no-autoload-standard-nodes'] !== 'true'){
 						Blackprint.loadModuleFromURL([
-							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-console.mjs?1',
-							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-data.mjs?1',
-							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-decoration.mjs?1',
-							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-flowcontrol.mjs?1',
-							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.8/dist/nodes-input.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.10/dist/nodes-console.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.10/dist/nodes-data.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.10/dist/nodes-decoration.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.10/dist/nodes-flowcontrol.mjs?1',
+							'https://cdn.jsdelivr.net/npm/@blackprint/nodes@0.10/dist/nodes-input.mjs?1',
 						], {
 							loadBrowserInterface: true
 						});
