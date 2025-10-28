@@ -126,6 +126,9 @@ cd vscode-extension
 # Install dependencies
 npm install
 
+# Download all editor dependencies as local asset
+npm run update-editor-asset-dependency
+
 # Start development mode
 npm start
 

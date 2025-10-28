@@ -6,4 +6,8 @@ node_modules/
 .DS_Store
 *.vsix
 example/
-out/assets/
+out/assets/fonts
+out/assets/webfonts
+out/assets/*.js
+out/assets/*.css
+out/assets/*.map
